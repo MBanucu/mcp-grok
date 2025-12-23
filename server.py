@@ -114,6 +114,26 @@ def execute_shell(command: str = "") -> str:
         logger.error("Shell execution error: %r (%s)", command, e)
         return f"Execution error: {type(e).__name__}: {str(e)}"
 
+from pydantic import BaseModel
+
+class ActiveProjectInfo(BaseModel):
+    name: str
+    path: str
+
+@mcp.tool(title="Get Active Project")
+def get_active_project() -> ActiveProjectInfo:
+    """
+    Returns info about the currently active project: both name and full path,
+    derived from the in-memory session_shell_cwd variable.
+    """
+    global session_shell_cwd
+    name = ""
+    path = ""
+    if session_shell_cwd and os.path.isdir(session_shell_cwd):
+        name = os.path.basename(session_shell_cwd)
+        path = session_shell_cwd
+    return ActiveProjectInfo(name=name, path=path)
+
 @mcp.tool(title="List All Projects")
 def list_all_projects() -> list:
     """

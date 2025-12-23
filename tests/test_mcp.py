@@ -128,6 +128,33 @@ fi
     last_line = [line for line in shell_output.splitlines() if line.strip()][-1]
     assert "Not inside nix-shell" in last_line, f"Expected not inside nix-shell, got: {last_line!r}"
 
+def test_get_active_project(mcp_server):
+    project_name = "proj_active_test"
+    mcp_create_project(mcp_server, project_name)
+    # Call get_active_project
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 18,
+        "method": "tools/call",
+        "params": {"name": "get_active_project"},
+    }
+    resp = requests.post(mcp_server, json=payload, headers=headers)
+    assert resp.status_code == 200, f"Failed: {resp.text}"
+    result = resp.json()["result"]
+    print(f"RAW get_active_project RESPONSE: {resp.json()}")
+    # FastMCP returns Pydantic result inside 'structuredContent' for BaseModel
+    struct = result.get("structuredContent")
+    if struct is not None:
+        name = struct.get("name")
+        path = struct.get("path")
+    else:
+        name = result.get("name")
+        path = result.get("path")
+    print(f"Active project name: {name}, path: {path}")
+    assert name == project_name, f"Active project name should be {project_name}, got: {name!r}"
+    assert path and path.endswith(project_name), f"Path should end with {project_name}, got: {path!r}"
+
 def test_list_all_projects(mcp_server):
     names = ["projA", "projB", "projC"]
     for n in names:
