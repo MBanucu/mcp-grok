@@ -244,3 +244,35 @@ def test_shell_exit_and_reuse(mcp_server):
         echo_output = str(content).strip()
     print(f"SHELL OUTPUT FOR ECHO PATH AFTER EXIT:\n{echo_output}\n--- END SHELL OUTPUT ---")
     assert "Session shell not running" in echo_output or "Please create a project first" in echo_output or "Error" in echo_output, f"Unexpected PATH-after-exit: {echo_output!r}"
+
+def test_shell_double_pipe_or(mcp_server):
+    project_name = "pytest_shell_double_pipe_or"
+    mcp_create_project(mcp_server, project_name)
+
+    # Case 1: First command succeeds, second ignored
+    shell_output_1 = mcp_execute_shell(mcp_server, 'echo foo || echo bar')
+    print(f"SHELL OUTPUT FOR 'echo foo || echo bar':\n{shell_output_1}\n--- END SHELL OUTPUT ---")
+    # Should contain only 'foo' if shell works correctly
+    assert any("foo" in line for line in shell_output_1.splitlines()), f"Expected 'foo' when running 'echo foo || echo bar', got: {shell_output_1!r}"
+    assert not any("bar" in line for line in shell_output_1.splitlines()), f"Unexpected 'bar' when first command succeeds: {shell_output_1!r}"
+
+    # Case 2: First command fails, second runs
+    shell_output_2 = mcp_execute_shell(mcp_server, 'false || echo fallback')
+    print(f"SHELL OUTPUT FOR 'false || echo fallback':\n{shell_output_2}\n--- END SHELL OUTPUT ---")
+    # Should contain only 'fallback'
+    assert any("fallback" in line for line in shell_output_2.splitlines()), f"Expected 'fallback' when first command fails, got: {shell_output_2!r}"
+    assert not any("foo" in line for line in shell_output_2.splitlines()), f"Unexpected 'foo' when first command fails: {shell_output_2!r}"
+
+def test_shell_ls_or_echo(mcp_server):
+    project_name = "pytest_shell_ls_or_echo"
+    mcp_create_project(mcp_server, project_name)
+    cmd = 'ls -l /run/opengl-driver/lib/ 2>/dev/null || echo "Directory not found or empty"'
+    shell_output = mcp_execute_shell(mcp_server, cmd)
+    print(f"SHELL OUTPUT FOR `{cmd}`:\n{shell_output}\n--- END SHELL OUTPUT ---")
+    # It should either list contents, or echo fallback
+    assert shell_output.strip(), "Shell output should not be empty."
+    if "Directory not found or empty" in shell_output:
+        assert shell_output.strip() == "Directory not found or empty", f"Fallback expected as only output, got: {shell_output!r}"
+    else:
+        # It should have a typical ls -l output header line (total N or drwx/ lrwx/ etc)
+        assert any(l.strip().startswith(("d", "l", "-", "total")) for l in shell_output.splitlines()), f"Expected directory listing, got: {shell_output!r}"
