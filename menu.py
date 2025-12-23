@@ -59,6 +59,9 @@ def main():
                 Button(text=label, handler=lambda v=value: (selected.update({'value': v}), app.exit()))
                 for (value, label) in menu_items
             ]
+            for btn in buttons:
+                btn.window.align = "left"
+
             from prompt_toolkit.widgets import Label
             from prompt_toolkit.widgets import Label
             from prompt_toolkit.key_binding import KeyBindings
