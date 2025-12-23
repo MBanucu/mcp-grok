@@ -276,3 +276,4 @@ def test_shell_ls_or_echo(mcp_server):
     else:
         # It should have a typical ls -l output header line (total N or drwx/ lrwx/ etc)
         assert any(l.strip().startswith(("d", "l", "-", "total")) for l in shell_output.splitlines()), f"Expected directory listing, got: {shell_output!r}"
+

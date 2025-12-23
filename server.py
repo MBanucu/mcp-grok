@@ -244,8 +244,23 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8000, help='Port to run MCP server on')
     parser.add_argument('--projects-dir', type=str, default='~/dev/mcp-projects', help='Base directory for MCP projects')
+    parser.add_argument('--default-project', type=str, default='default', help='Name for the default project to activate on server start')
     args = parser.parse_args()
     PROJECTS_DIR = os.path.expanduser(args.projects_dir)
+    default_project_name = args.default_project
+
+    # Ensure default project is activated
+    base_dir = PROJECTS_DIR
+    proj_path = os.path.join(base_dir, default_project_name)
+    if not os.path.exists(proj_path):
+        logger.info(f"Server startup: default project '{default_project_name}' does not exist. Creating new project.")
+        result = create_new_project(default_project_name)
+        logger.info(f"Default project creation result: {result}")
+    else:
+        logger.info(f"Server startup: default project '{default_project_name}' exists. Activating.")
+        result = change_active_project(default_project_name)
+        logger.info(f"Default project activation result: {result}")
+
     mcp.settings.port = args.port
     mcp.run(transport="streamable-http")
 
