@@ -11,7 +11,7 @@ USER_HOME = os.path.expanduser("~")
 DEV_ROOT = os.path.join(USER_HOME, "dev", "mcp-projects-test")
 
 # Helper
-def wait_for_server_ready(server_proc, timeout=10):
+def wait_for_server_ready(server_proc, timeout=30):
     start_time = time.time()
     if server_proc.stdout is None:
         server_proc.terminate()

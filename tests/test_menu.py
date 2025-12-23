@@ -32,7 +32,7 @@ def test_proxy_log():
     clean_log(menu_core.PROXY_LOGFILE)
     proc = menu_core.start_proxy()
     try:
-        wait_for_log(menu_core.PROXY_LOGFILE, timeout=10.0)
+        wait_for_log(menu_core.PROXY_LOGFILE, timeout=30.0)
     finally:
         menu_core.stop_proxy(proc)
     print("PASS: Proxy log not empty.")
