@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "nixos-console": {
+      "url": "http://localhost:8000/mcp"
+    }
+  }
+}
