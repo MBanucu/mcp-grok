@@ -1,6 +1,11 @@
 import os
 import re
-from prompt_toolkit.shortcuts import radiolist_dialog, message_dialog
+from prompt_toolkit.shortcuts import message_dialog
+from prompt_toolkit.application import Application
+from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.layout import Layout, HSplit
+from prompt_toolkit.widgets import Button, Dialog
+
 import menu_core
 
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
@@ -46,11 +51,59 @@ def main():
                 ('shell', 'Open Interactive Shell'),
                 ('exit', 'Exit'),
             ]
-            result = radiolist_dialog(
+            # Build vertical buttons using prompt_toolkit Application
+            selected = {'value': None}
+            def make_handler(val):
+                return lambda: (setattr(selected, 'value', val), app.exit())
+            buttons = [
+                Button(text=label, handler=lambda v=value: (selected.update({'value': v}), app.exit()))
+                for (value, label) in menu_items
+            ]
+            from prompt_toolkit.widgets import Label
+            from prompt_toolkit.widgets import Label
+            from prompt_toolkit.key_binding import KeyBindings
+
+            btn_container = HSplit(buttons, padding=1)
+            dialog = Dialog(
                 title='MCP Project Dev Menu',
-                text='Select an action:',
-                values=menu_items,
-            ).run()
+                body=HSplit([
+                    Label(text="Use Arrow/Tab/Shift-Tab/Up/Down to select, Enter to activate, Mouse click if supported."),
+                    btn_container,
+                ], padding=1),
+                with_background=True
+            )
+            kb = KeyBindings()
+            from prompt_toolkit.layout import Window
+
+            @kb.add('down')
+            def move_focus_down(event):
+                layout = event.app.layout
+                btns = btn_container.children
+                current_window = layout.current_window
+                btn_windows = btns  # Each is a Button (focusable)
+                try:
+                    i = btn_windows.index(current_window)
+                except ValueError:
+                    i = 0
+                next_i = (i + 1) % len(btn_windows)
+                layout.focus(btn_windows[next_i])
+
+            @kb.add('up')
+            def move_focus_up(event):
+                layout = event.app.layout
+                btns = btn_container.children
+                current_window = layout.current_window
+                btn_windows = btns  # Each is a Button (focusable)
+                try:
+                    i = btn_windows.index(current_window)
+                except ValueError:
+                    i = 0
+                prev_i = (i - 1 + len(btn_windows)) % len(btn_windows)
+                layout.focus(btn_windows[prev_i])
+
+            app = Application(layout=Layout(dialog), key_bindings=kb, full_screen=True, mouse_support=True)
+            app.run()
+            result = selected['value']
             if result == 'server':
                 if not (mcp_proc and mcp_proc.poll() is None):
                     mcp_proc = menu_core.start_server()
