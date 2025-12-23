@@ -139,7 +139,7 @@ def list_all_projects() -> list:
     """
     Returns a sorted list of all project directories in ~/dev/mcp-projects.
     """
-    base_dir = os.path.expanduser('~/dev/mcp-projects')
+    base_dir = PROJECTS_DIR
     if not os.path.exists(base_dir):
         return []
     return sorted([
@@ -163,7 +163,7 @@ def create_new_project(project_name: str) -> str:
     # Validate project name: safe chars only
     if not re.match(r'^[a-zA-Z0-9_.-]+$', project_name):
         return "Error: Unsafe project name. Only letters, numbers, _ . - allowed."
-    base_dir = os.path.expanduser('~/dev/mcp-projects')
+    base_dir = PROJECTS_DIR
     os.makedirs(base_dir, exist_ok=True)
     proj_path = os.path.join(base_dir, project_name)
     if not os.path.exists(proj_path):
@@ -207,7 +207,7 @@ def change_active_project(project_name: str) -> str:
     global session_shell, session_shell_cwd, session_shell_lock
     if not re.match(r'^[a-zA-Z0-9_.-]+$', project_name):
         return "Error: Unsafe project name. Only letters, numbers, _ . - allowed."
-    base_dir = os.path.expanduser('~/dev/mcp-projects')
+    base_dir = PROJECTS_DIR
     proj_path = os.path.join(base_dir, project_name)
     if not os.path.isdir(proj_path):
         return f"Error: Project directory does not exist: {proj_path}"
@@ -237,11 +237,15 @@ def change_active_project(project_name: str) -> str:
     logger.info(f"Changed active project to %r in %r", project_name, proj_path)
     return f"Changed active project to: {proj_path}"
 
+PROJECTS_DIR = os.path.expanduser('~/dev/mcp-projects')  # Overridable via --projects-dir
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8000, help='Port to run MCP server on')
+    parser.add_argument('--projects-dir', type=str, default='~/dev/mcp-projects', help='Base directory for MCP projects')
     args = parser.parse_args()
+    PROJECTS_DIR = os.path.expanduser(args.projects_dir)
     mcp.settings.port = args.port
     mcp.run(transport="streamable-http")
 

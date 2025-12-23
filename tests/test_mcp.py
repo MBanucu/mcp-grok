@@ -8,7 +8,7 @@ import pytest
 
 PORT = 8099
 USER_HOME = os.path.expanduser("~")
-DEV_ROOT = os.path.join(USER_HOME, "dev", "mcp-projects")
+DEV_ROOT = os.path.join(USER_HOME, "dev", "mcp-projects-test")
 
 # Helper
 def wait_for_server_ready(server_proc, timeout=10):
@@ -38,7 +38,7 @@ def mcp_server():
     os.makedirs(DEV_ROOT, exist_ok=True)
     # Start server
     server_proc = subprocess.Popen([
-        "python", "server.py", "--port", str(PORT)],
+        "python", "server.py", "--port", str(PORT), "--projects-dir", DEV_ROOT],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -194,7 +194,7 @@ def test_change_active_project(mcp_server):
         echo_output = "\n".join(item.get("text", str(item)) for item in content if isinstance(item, dict)).strip()
     else:
         echo_output = str(content).strip() if content else str(echo_result).strip()
-    assert echo_output.endswith(f"/dev/mcp-projects/{project_a}"), f"Shell $PWD: got {echo_output!r}"
+    assert echo_output.endswith(f"{DEV_ROOT}/{project_a}"), f"Shell $PWD: got {echo_output!r}"
 
     names = ["projA", "projB", "projC"]
     for n in names:
