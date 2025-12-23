@@ -8,6 +8,4 @@ wheels/
 
 # Virtual environments
 .venv
-server_audit.log
-proxy.log
-menu.log
+*.log
