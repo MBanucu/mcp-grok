@@ -186,11 +186,56 @@ def create_new_project(project_name: str) -> str:
                 text=True,
                 bufsize=1
             )
+            # Ensure correct directory: no-op if already correct, but fixes login shell case
+            if proc.stdin is not None:
+                proc.stdin.write(f'cd "{proj_path}"\n')
+                proc.stdin.flush()
         except Exception as e:
             return f"Error: Could not start project shell: {type(e).__name__}: {str(e)}"
         session_shell = proc
     logger.info(f"Started clean shell for project %r in %r", project_name, proj_path)
     return f"Started shell for project: {proj_path}"
+
+@mcp.tool(title="Change Active Project")
+def change_active_project(project_name: str) -> str:
+    """
+    Switch to an existing project under ~/dev/mcp-projects/<project_name> and start a persistent shell in that directory.
+    Does NOT create the directory. Kills previous shell if running, starts new shell in the project dir, and updates session_shell_cwd.
+    Returns a status string.
+    """
+    import re
+    global session_shell, session_shell_cwd, session_shell_lock
+    if not re.match(r'^[a-zA-Z0-9_.-]+$', project_name):
+        return "Error: Unsafe project name. Only letters, numbers, _ . - allowed."
+    base_dir = os.path.expanduser('~/dev/mcp-projects')
+    proj_path = os.path.join(base_dir, project_name)
+    if not os.path.isdir(proj_path):
+        return f"Error: Project directory does not exist: {proj_path}"
+    with session_shell_lock:
+        if session_shell is not None and session_shell.poll() is None:
+            session_shell.kill()
+        session_shell = None
+        session_shell_cwd = proj_path
+        shell_args = ['sudo', '-u', 'michi', '--login', 'bash', '-l']
+        try:
+            proc = subprocess.Popen(
+                shell_args,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                cwd=proj_path,
+                text=True,
+                bufsize=1
+            )
+            # Ensure the correct working directory even for login shells
+            if proc.stdin is not None:
+                proc.stdin.write(f'cd "{proj_path}"\n')
+                proc.stdin.flush()
+        except Exception as e:
+            return f"Error: Could not start project shell: {type(e).__name__}: {str(e)}"
+        session_shell = proc
+    logger.info(f"Changed active project to %r in %r", project_name, proj_path)
+    return f"Changed active project to: {proj_path}"
 
 if __name__ == "__main__":
     import argparse

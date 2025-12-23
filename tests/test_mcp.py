@@ -155,7 +155,47 @@ def test_get_active_project(mcp_server):
     assert name == project_name, f"Active project name should be {project_name}, got: {name!r}"
     assert path and path.endswith(project_name), f"Path should end with {project_name}, got: {path!r}"
 
-def test_list_all_projects(mcp_server):
+def test_change_active_project(mcp_server):
+    project_a = "projA"
+    project_b = "projB"
+    mcp_create_project(mcp_server, project_a)
+    mcp_create_project(mcp_server, project_b)
+    # Change active project to A
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    change_payload = {
+        "jsonrpc": "2.0",
+        "id": 30,
+        "method": "tools/call",
+        "params": {"name": "change_active_project", "arguments": {"project_name": project_a}},
+    }
+    resp = requests.post(mcp_server, json=change_payload, headers=headers)
+    assert resp.status_code == 200, f"Failed: {resp.text}"
+    result = resp.json()["result"]
+    # Now get active project
+    get_payload = {"jsonrpc": "2.0", "id": 31, "method": "tools/call", "params": {"name": "get_active_project"}}
+    get_resp = requests.post(mcp_server, json=get_payload, headers=headers)
+    assert get_resp.status_code == 200
+    struct = get_resp.json()["result"].get("structuredContent")
+    name = struct.get("name") if struct else None
+    assert name == project_a, f"Expected active {project_a}, got {name!r}"
+
+    # Also verify shell PWD matches
+    echo_payload = {
+        "jsonrpc": "2.0",
+        "id": 32,
+        "method": "tools/call",
+        "params": {"name": "execute_shell", "arguments": {"command": "echo $PWD"}},
+    }
+    echo_resp = requests.post(mcp_server, json=echo_payload, headers=headers)
+    assert echo_resp.status_code == 200
+    echo_result = echo_resp.json()["result"]
+    content = echo_result.get("content")
+    if isinstance(content, list):
+        echo_output = "\n".join(item.get("text", str(item)) for item in content if isinstance(item, dict)).strip()
+    else:
+        echo_output = str(content).strip() if content else str(echo_result).strip()
+    assert echo_output.endswith(f"/dev/mcp-projects/{project_a}"), f"Shell $PWD: got {echo_output!r}"
+
     names = ["projA", "projB", "projC"]
     for n in names:
         mcp_create_project(mcp_server, n)
