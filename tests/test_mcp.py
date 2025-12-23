@@ -1,0 +1,179 @@
+import os
+import subprocess
+import time
+import shutil
+import requests
+import select
+import pytest
+
+PORT = 8099
+USER_HOME = os.path.expanduser("~")
+DEV_ROOT = os.path.join(USER_HOME, "dev", "mcp-projects")
+
+# Helper
+def wait_for_server_ready(server_proc, timeout=10):
+    start_time = time.time()
+    if server_proc.stdout is None:
+        server_proc.terminate()
+        raise RuntimeError("Failed to capture server stdout")
+    while True:
+        if time.time() - start_time > timeout:
+            server_proc.terminate()
+            raise TimeoutError("Timed out waiting for server to start")
+        rlist, _, _ = select.select([server_proc.stdout], [], [], 0.1)
+        if rlist:
+            line = server_proc.stdout.readline()
+            if not line:
+                if server_proc.poll() is not None:
+                    raise RuntimeError("Server process exited prematurely")
+                continue
+            if "Uvicorn running on http://" in line or "Uvicorn running on http://127.0.0.1" in line:
+                return
+
+@pytest.fixture(scope="module")
+def mcp_server():
+    # Clean dev root
+    if os.path.exists(DEV_ROOT):
+        shutil.rmtree(DEV_ROOT)
+    os.makedirs(DEV_ROOT, exist_ok=True)
+    # Start server
+    server_proc = subprocess.Popen([
+        "python", "server.py", "--port", str(PORT)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    try:
+        wait_for_server_ready(server_proc)
+        yield f"http://localhost:{PORT}/mcp"
+    finally:
+        server_proc.terminate()
+        try:
+            server_proc.wait(timeout=5)
+        except Exception:
+            server_proc.kill()
+        if os.path.exists(DEV_ROOT):
+            shutil.rmtree(DEV_ROOT)
+
+def mcp_create_project(server_url, project_name):
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    create_payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+            "name": "create_new_project",
+            "arguments": {"project_name": project_name}
+        }
+    }
+    create_resp = requests.post(server_url, json=create_payload, headers=headers)
+    assert create_resp.status_code == 200, f"Failed: {create_resp.text}"
+    create_data = create_resp.json()
+    assert "result" in create_data, f"JSON-RPC error or missing result: {create_data}"
+    test_dir = os.path.join(DEV_ROOT, project_name)
+    assert os.path.isdir(test_dir), f"Project directory not created: {test_dir}"
+    return test_dir
+
+def mcp_execute_shell(server_url, command):
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    shell_payload = {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/call",
+        "params": {
+            "name": "execute_shell",
+            "arguments": {"command": command}
+        }
+    }
+    shell_resp = requests.post(server_url, json=shell_payload, headers=headers)
+    assert shell_resp.status_code == 200, f"Failed: {shell_resp.text}"
+    shell_data = shell_resp.json()
+    content = shell_data["result"].get("content", []) if isinstance(shell_data["result"], dict) else shell_data["result"]
+    if isinstance(content, list):
+        shell_output = "\n".join(item.get("text", str(item)) for item in content if isinstance(item, dict)).strip()
+    else:
+        shell_output = str(content).strip()
+    return shell_output
+
+def test_shell_echo_path(mcp_server):
+    project_name = "pytest_combined_echo_path"
+    mcp_create_project(mcp_server, project_name)
+    shell_output = mcp_execute_shell(mcp_server, 'echo "$PATH"')
+    print(f"SHELL OUTPUT FOR ECHO PATH:\n{shell_output}\n--- END SHELL OUTPUT ---")
+    last_line = [line for line in shell_output.splitlines() if line.strip()][-1]
+    colon_count = last_line.count(":")
+    assert 1 <= colon_count <= 6, f"$PATH has {colon_count} ':'s, expected at most 6: {last_line!r}"
+    assert "michi" in last_line, f"$PATH did not contain 'michi': {last_line!r}"
+
+def test_shell_echo_user(mcp_server):
+    project_name = "pytest_combined_echo_user"
+    mcp_create_project(mcp_server, project_name)
+    shell_output = mcp_execute_shell(mcp_server, 'whoami')
+    print(f"SHELL OUTPUT FOR WHOAMI:\n{shell_output}\n--- END SHELL OUTPUT ---")
+    last_line = [line for line in shell_output.splitlines() if line.strip()][-1]
+    assert last_line == "michi", f"Expected user 'michi', got: {last_line!r}"
+
+def test_shell_detect_nix_shell(mcp_server):
+    project_name = "pytest_combined_nixshell"
+    mcp_create_project(mcp_server, project_name)
+    shell_script = '''
+if [[ -n "$IN_NIX_SHELL" ]]; then
+    echo "Inside nix-shell ($IN_NIX_SHELL)"
+else
+    echo "Not inside nix-shell"
+fi
+'''.strip()
+    shell_output = mcp_execute_shell(mcp_server, shell_script)
+    print(f"SHELL OUTPUT FOR NIX-SHELL DETECT:\n{shell_output}\n--- END SHELL OUTPUT ---")
+    last_line = [line for line in shell_output.splitlines() if line.strip()][-1]
+    assert "Not inside nix-shell" in last_line, f"Expected not inside nix-shell, got: {last_line!r}"
+
+def test_list_all_projects(mcp_server):
+    names = ["projA", "projB", "projC"]
+    for n in names:
+        mcp_create_project(mcp_server, n)
+        assert os.path.isdir(os.path.join(DEV_ROOT, n))
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    list_payload = {
+        "jsonrpc": "2.0",
+        "id": 17,
+        "method": "tools/call",
+        "params": {"name": "list_all_projects"},
+    }
+    resp = requests.post(mcp_server, json=list_payload, headers=headers)
+    assert resp.status_code == 200, f"Failed: {resp.text}"
+    result = resp.json()["result"]
+    if isinstance(result, dict) and "content" in result:
+        project_names = [item.get("text") for item in result["content"] if isinstance(item, dict)]
+    else:
+        project_names = result
+    print(f"Projects listed: {project_names}")
+    assert set(names).issubset(set(project_names)), f"Expected at least {names} in projects: {project_names}"
+
+def test_shell_exit_and_reuse(mcp_server):
+    project_name = "pytest_combined_exit_reuse"
+    mcp_create_project(mcp_server, project_name)
+    # Exit persistent shell
+    exit_output = mcp_execute_shell(mcp_server, 'exit')
+    print(f"SHELL EXIT OUTPUT:\n{exit_output}\n--- END SHELL EXIT OUTPUT ---")
+    # Try echo $PATH again (should error)
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {
+            "name": "execute_shell",
+            "arguments": {"command": "echo $PATH"}
+        }
+    }
+    echo_resp = requests.post(mcp_server, json=payload, headers=headers)
+    assert echo_resp.status_code == 200, f"Failed: {echo_resp.text}"
+    echo_data = echo_resp.json()
+    content = echo_data["result"].get("content", []) if isinstance(echo_data["result"], dict) else echo_data["result"]
+    if isinstance(content, list):
+        echo_output = "\n".join(item.get("text", str(item)) for item in content if isinstance(item, dict)).strip()
+    else:
+        echo_output = str(content).strip()
+    print(f"SHELL OUTPUT FOR ECHO PATH AFTER EXIT:\n{echo_output}\n--- END SHELL OUTPUT ---")
+    assert "Session shell not running" in echo_output or "Please create a project first" in echo_output or "Error" in echo_output, f"Unexpected PATH-after-exit: {echo_output!r}"

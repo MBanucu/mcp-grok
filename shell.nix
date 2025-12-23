@@ -6,6 +6,7 @@ pkgs.mkShell {
     uv
     nodejs_latest
     pyright
+    python312Packages.requests
   ];
 
   shellHook = ''
