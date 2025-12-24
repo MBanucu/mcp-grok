@@ -9,6 +9,7 @@ PROXY_LOGFILE = "superassistant_proxy.log"
 class ServerManager:
     def __init__(self):
         self._server_proc = None
+
     def start_server(self, port=8000):
         # Check if server is already running on the given port
         try:
@@ -46,6 +47,7 @@ class ServerManager:
                 p.kill()
         self._server_proc = None
 
+
 server_manager = ServerManager()
 
 
@@ -61,6 +63,7 @@ def start_proxy():
     )
     return proc
 
+
 def stop_proxy(proc):
     if proc and proc.poll() is None:
         proc.terminate()
@@ -69,9 +72,12 @@ def stop_proxy(proc):
         except subprocess.TimeoutExpired:
             proc.kill()
 
+
 def clear_log(log_path):
     if os.path.exists(log_path):
-        with open(log_path, "w"): pass
+        with open(log_path, "w"):
+            pass
+
 
 def log_content(log_path):
     if os.path.exists(log_path):
