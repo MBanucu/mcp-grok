@@ -14,8 +14,11 @@ pkgs.mkShell {
   ];
 
   shellHook = ''
+    export UV_PYTHON=$(which python)
     export PATH="$PWD/bin:$PATH"
     uv sync --all-extras
+    echo "uv     python version = $(uv run python --version)"
+    echo "system python version = $(python --version)"
     if [ -t 1 ] && [ "${dontrunmenu}" != "1" ]; then
       uv run menu.py
       exit $?
