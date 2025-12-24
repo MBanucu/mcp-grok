@@ -1,21 +1,10 @@
-import os
 import re
-import subprocess
-from typing import Optional
-
 from prompt_toolkit.shortcuts import message_dialog
-from prompt_toolkit.application import Application
-from prompt_toolkit.layout import Layout, HSplit
-from prompt_toolkit.widgets import Button, Dialog, Label
-from prompt_toolkit.layout.containers import WindowAlign
-from prompt_toolkit.key_binding import KeyBindings
-
 import menu_core
+from menu_state import MenuState
+from menu_app import MenuApp
 
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
-
-
-from menu_state import MenuState
 
 
 def handle_log_action(log_path: str, action: str, title: str) -> None:
@@ -61,13 +50,7 @@ def show_log(
         message_dialog(title=title, text=content).run()
 
 
-from menu_app import MenuApp
-
-
-
 if __name__ == '__main__':
-    from menu_state import MenuState
-    from menu_app import MenuApp
     state = None
     try:
         state = MenuState()
@@ -78,4 +61,3 @@ if __name__ == '__main__':
         if state:
             state.stop_mcp()
             state.stop_proxy()
-
