@@ -2,7 +2,7 @@
 
 pkgs.mkShell {
   packages = with pkgs; [
-    python312
+    # python312
     uv
     nodejs_latest
   ];
