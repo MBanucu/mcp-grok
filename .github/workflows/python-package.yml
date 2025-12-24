@@ -22,10 +22,10 @@ jobs:
         nix_path: nixpkgs=channel:nixos-25.11
 
     - name: Lint with flake8
-      run: nix-shell --argstr pythonVersion "${{ matrix.python-version }}" --run "uv run flake8 *.py src tests --count --select=E9,F63,F7,F82 --show-source --statistics && uv run flake8 *.py src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics"
+      run: nix-shell --argstr dontrunmenu "1" --argstr pythonVersion "${{ matrix.python-version }}" --run "uv run flake8 *.py src tests --count --select=E9,F63,F7,F82 --show-source --statistics && uv run flake8 *.py src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics"
 
     - name: Type check with pyright
-      run: nix-shell --argstr pythonVersion "${{ matrix.python-version }}" --run "uv run pyright ."
+      run: nix-shell --argstr dontrunmenu "1" --argstr pythonVersion "${{ matrix.python-version }}" --run "uv run pyright ."
 
     - name: Test with pytest
-      run: nix-shell --argstr pythonVersion "${{ matrix.python-version }}" --run "uv run pytest tests"
+      run: nix-shell --argstr dontrunmenu "1" --argstr pythonVersion "${{ matrix.python-version }}" --run "uv run pytest tests"
