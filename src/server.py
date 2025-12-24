@@ -42,12 +42,10 @@ session_shell_cwd = None
 )
 def execute_shell(command: str = "") -> str:
     """
-    Execute any single shell command, or in persistent shell if active.
-    - Executes arbitrary commands via subprocess or session shell if present.
-    - WARNING: This is unsafe for production or open internet!
+    Execute any single shell command in the persistent shell of the active project.
+    - Executes arbitrary commands via subprocess or session shell.
     - max output: 8KB.
     - Timeout: 180s.
-    - Input is NOT parsed by a shell (prevents some injection).
     """
     global session_shell, session_shell_lock, session_shell_cwd
     try:
@@ -105,8 +103,7 @@ class ActiveProjectInfo(BaseModel):
 @mcp.tool(title="Get Active Project")
 def get_active_project() -> ActiveProjectInfo:
     """
-    Returns info about the currently active project: both name and full path,
-    derived from the in-memory session_shell_cwd variable.
+    Returns info about the currently active project: both name and full path.
     """
     global session_shell_cwd
     name = ""
@@ -182,7 +179,7 @@ def create_new_project(project_name: str) -> str:
 def change_active_project(project_name: str) -> str:
     """
     Switch to an existing project under ~/dev/mcp-projects/<project_name> and start a persistent shell in that directory.
-    Does NOT create the directory. Kills previous shell if running, starts new shell in the project dir, and updates session_shell_cwd.
+    Does NOT create the directory. Kills previous shell if running and starts new shell in the project dir.
     Returns a status string.
     """
     import re
