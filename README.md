@@ -75,11 +75,11 @@ See `tests/test_mcp.py` for more programmatic usage patterns and expected output
 nix-shell --run 'pytest tests'
 ```
 
-or, with your system Python:
+or, with your system Python and [uv](https://github.com/astral-sh/uv):
 
 ```sh
-pip install -r requirements.txt  # or poetry install, etc
-pytest tests
+uv sync            # Installs all dependencies from pyproject.toml/uv.lock
+uv run pytest tests  # Runs the tests in the managed environment
 ```
 
 Tests launch the server in a subprocess, simulate real tool API requests, and clean up after themselves. All main features are covered, including project management, shell execution, API error handling, and session management.
