@@ -12,3 +12,4 @@ dependencies = [
 
 [project.optional-dependencies]
 typecheck = ["pyright"]
+lint = ["flake8"]
