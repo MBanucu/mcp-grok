@@ -78,3 +78,15 @@ def test_proxy_log_config_error():
         assert not error_found, "Proxy log reports a config loading error!"
     finally:
         menu_core.stop_proxy(proc)
+
+def test_start_server_runs_and_stops():
+    """Test start_server launches a server process that stays running and can be stopped."""
+    proc = menu_core.start_server()
+    try:
+        assert proc is not None, "start_server did not return a process object"
+        # Give the process a brief moment to start
+        time.sleep(1)
+        assert proc.poll() is None, "Server process exited prematurely after start"
+    finally:
+        menu_core.stop_server(proc)
+        assert proc.poll() is not None, "Server process did not stop after stop_server called"

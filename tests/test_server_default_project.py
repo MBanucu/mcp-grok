@@ -13,7 +13,7 @@ def test_default_project_activation():
     port = 8128
     default_project = "autotest_default_proj"
     server_proc = subprocess.Popen([
-        "python", "server.py",
+        "python", "src/server.py",
         "--port", str(port),
         "--projects-dir", projects_dir,
         "--default-project", default_project],

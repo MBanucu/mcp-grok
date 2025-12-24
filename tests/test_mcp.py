@@ -38,7 +38,7 @@ def mcp_server():
     os.makedirs(DEV_ROOT, exist_ok=True)
     # Start server
     server_proc = subprocess.Popen([
-        "python", "server.py", "--port", str(PORT), "--projects-dir", DEV_ROOT],
+        "python", "src/server.py", "--port", str(PORT), "--projects-dir", DEV_ROOT],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,

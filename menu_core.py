@@ -7,7 +7,7 @@ PROXY_LOGFILE = "superassistant_proxy.log"
 def start_server():
     log = open(MCP_LOGFILE, "a")
     proc = subprocess.Popen(
-        ['uv', 'run', 'server.py'],
+        ['uv', 'run', 'src/server.py'],
         stdout=log,
         stderr=subprocess.STDOUT,
         stdin=subprocess.DEVNULL,
