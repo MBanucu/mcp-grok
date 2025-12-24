@@ -1,9 +1,9 @@
 import os
+import shutil
 import subprocess
 import time
-import shutil
-import requests
 import select
+import requests
 import pytest
 import getpass
 
@@ -21,16 +21,13 @@ DEV_ROOT = os.path.join(USER_HOME, "dev", "mcp-projects-test")
 
 @pytest.fixture(scope="module")
 def mcp_server():
-    """Spin up MCP server & clean up dev root."""
+    """Start MCP server and clean up dev root on teardown."""
     if os.path.exists(DEV_ROOT):
         shutil.rmtree(DEV_ROOT)
     os.makedirs(DEV_ROOT, exist_ok=True)
     server_proc = subprocess.Popen([
-        "python", "-m", "src.server", "--port", str(PORT), "--projects-dir", DEV_ROOT],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-    )
+        "python", "-m", "src.server", "--port", str(PORT), "--projects-dir", DEV_ROOT
+    ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     try:
         _wait_for_server_ready(server_proc)
         yield f"http://localhost:{PORT}/mcp"
@@ -43,7 +40,7 @@ def mcp_server():
         if os.path.exists(DEV_ROOT):
             shutil.rmtree(DEV_ROOT)
 
-# --- Internal, not pytest helpers ---
+# --- Internal Helpers ---
 def _wait_for_server_ready(server_proc, timeout=30):
     start_time = time.time()
     if server_proc.stdout is None:
@@ -63,9 +60,8 @@ def _wait_for_server_ready(server_proc, timeout=30):
             if "Uvicorn running on http://" in line or "Uvicorn running on http://127.0.0.1" in line:
                 return
 
-# API helpers
 def mcp_create_project(server_url, project_name):
-    """Create a project via MCP API."""
+    """Create project via MCP API."""
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
     payload = {
         "jsonrpc": "2.0",
@@ -81,13 +77,13 @@ def mcp_create_project(server_url, project_name):
     data = resp.json()
     assert "result" in data, f"JSON-RPC error or missing result: {data}"
     test_dir = os.path.join(DEV_ROOT, project_name)
-    assert os.path.isdir(test_dir), f"Project directory not created: {test_dir}"
+    assert os.path.isdir(test_dir), f"Project dir not created: {test_dir}"
     return test_dir
 
 def mcp_execute_shell(server_url, command):
-    """Execute shell command via MCP API."""
+    """Run shell command via MCP API."""
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
-    shell_payload = {
+    payload = {
         "jsonrpc": "2.0",
         "id": RPC_ID_EXECUTE_SHELL,
         "method": "tools/call",
@@ -96,17 +92,13 @@ def mcp_execute_shell(server_url, command):
             "arguments": {"command": command},
         },
     }
-    resp = requests.post(server_url, json=shell_payload, headers=headers)
-    assert resp.status_code == 200, f"Failed: {resp.text}"
+    resp = requests.post(server_url, json=payload, headers=headers)
+    assert resp.status_code == 200, f"Shell failed: {resp.text}"
     data = resp.json()
     return _extract_shell_output(data["result"])
 
-# Output helpers
 def _extract_shell_output(result):
-    if isinstance(result, dict):
-        content = result.get("content", result)
-    else:
-        content = result
+    content = result.get("content", result) if isinstance(result, dict) else result
     if isinstance(content, list):
         return "\n".join(item.get("text", str(item)) for item in content if isinstance(item, dict)).strip()
     return str(content).strip()
@@ -115,26 +107,26 @@ def get_last_non_empty_line(output):
     lines = [line for line in output.splitlines() if line.strip()]
     return lines[-1] if lines else ""
 
-# --- Tests ---
+# --- Test Cases ---
 
 def test_shell_echo_path(mcp_server):
-    """Echo $PATH env var, must contain colons."""
+    """Echo $PATH env var, must contain ':' ."""
     project_name = "pytest_echo_path"
     mcp_create_project(mcp_server, project_name)
     shell_output = mcp_execute_shell(mcp_server, 'echo "$PATH"')
     last_line = get_last_non_empty_line(shell_output)
-    assert last_line, f"$PATH is empty: {last_line!r}"
-    assert ':' in last_line, f"$PATH does not contain ':': {last_line!r}"
+    assert last_line, f"$PATH empty: {last_line!r}"
+    assert ':' in last_line, f"$PATH missing ':': {last_line!r}"
 
 
 def test_shell_echo_user(mcp_server):
-    """Echo current user matches getpass.getuser()."""
+    """Check shell user matches getpass.getuser."""
     project_name = "pytest_echo_user"
     mcp_create_project(mcp_server, project_name)
     shell_output = mcp_execute_shell(mcp_server, 'whoami')
     last_line = get_last_non_empty_line(shell_output)
     expected_user = getpass.getuser()
-    assert last_line == expected_user, f"Expected user '{expected_user}', got: {last_line!r}"
+    assert last_line == expected_user, f"User mismatch: expected {expected_user}, got {last_line!r}"
 
 
 def test_shell_detect_nix_shell(mcp_server):
@@ -150,11 +142,11 @@ def test_shell_detect_nix_shell(mcp_server):
     '''.strip()
     shell_output = mcp_execute_shell(mcp_server, shell_script)
     last_line = get_last_non_empty_line(shell_output)
-    assert "Not inside nix-shell" in last_line, f"Expected not inside nix-shell, got: {last_line!r}"
+    assert "Not inside nix-shell" in last_line, f"Expected outside nix-shell, got: {last_line!r}"
 
 
 def test_get_active_project(mcp_server):
-    """API: get_active_project returns correct project name/path."""
+    """API: get_active_project returns correct name/path."""
     project_name = "proj_active_test"
     mcp_create_project(mcp_server, project_name)
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -165,17 +157,17 @@ def test_get_active_project(mcp_server):
         "params": {"name": "get_active_project"},
     }
     resp = requests.post(mcp_server, json=payload, headers=headers)
-    assert resp.status_code == 200, f"Failed get_active_project: {resp.text}"
+    assert resp.status_code == 200, f"get_active_project failed: {resp.text}"
     result = resp.json()["result"]
     struct = result.get("structuredContent")
     name = struct.get("name") if struct else result.get("name")
     path = struct.get("path") if struct else result.get("path")
-    assert name == project_name, f"Active project name should be {project_name}, got: {name!r}"
-    assert path and path.endswith(project_name), f"Path should end with {project_name}, got: {path!r}"
+    assert name == project_name, f"Active project mismatch: expected {project_name}, got {name!r}"
+    assert path and path.endswith(project_name), f"Path mismatch: {path!r}"
 
 
 def test_change_active_project(mcp_server):
-    """Change active project and confirm shell $PWD and project listing."""
+    """Change active project; verify $PWD/project listing."""
     project_a = "projA"
     project_b = "projB"
     mcp_create_project(mcp_server, project_a)
@@ -188,21 +180,26 @@ def test_change_active_project(mcp_server):
         "params": {"name": "change_active_project", "arguments": {"project_name": project_a}},
     }
     resp = requests.post(mcp_server, json=change_payload, headers=headers)
-    assert resp.status_code == 200, f"Failed to change active project: {resp.text}"
-    result = resp.json()["result"]
-    get_payload = {"jsonrpc": "2.0", "id": 31, "method": "tools/call", "params": {"name": "get_active_project"}}
+    assert resp.status_code == 200, f"Change active project failed: {resp.text}"
+    get_payload = {
+        "jsonrpc": "2.0",
+        "id": 31,
+        "method": "tools/call",
+        "params": {"name": "get_active_project"},
+    }
     get_resp = requests.post(mcp_server, json=get_payload, headers=headers)
     assert get_resp.status_code == 200
-    struct = get_resp.json()["result"].get("structuredContent")
+    result = get_resp.json()["result"]
+    struct = result.get("structuredContent")
     name = struct.get("name") if struct else None
-    assert name == project_a, f"Expected active {project_a}, got {name!r}"
+    assert name == project_a, f"Active project mismatch: expected {project_a}, got {name!r}"
     echo_output = mcp_execute_shell(mcp_server, "echo $PWD")
     assert echo_output.endswith(f"{DEV_ROOT}/{project_a}"), f"Shell $PWD: got {echo_output!r}"
-    # Create more projects and check list
+    # Create and check multiple projects
     names = ["projA", "projB", "projC"]
     for n in names:
         mcp_create_project(mcp_server, n)
-        assert os.path.isdir(os.path.join(DEV_ROOT, n)), f"Project directory not created for {n}"
+        assert os.path.isdir(os.path.join(DEV_ROOT, n)), f"Project dir not created for {n}"
     list_payload = {
         "jsonrpc": "2.0",
         "id": RPC_ID_LIST_PROJECTS,
@@ -210,38 +207,38 @@ def test_change_active_project(mcp_server):
         "params": {"name": "list_all_projects"},
     }
     resp = requests.post(mcp_server, json=list_payload, headers=headers)
-    assert resp.status_code == 200, f"Failed to list projects: {resp.text}"
+    assert resp.status_code == 200, f"List projects failed: {resp.text}"
     result = resp.json()["result"]
     if isinstance(result, dict) and "content" in result:
         project_names = [item.get("text") for item in result["content"] if isinstance(item, dict)]
     else:
         project_names = result
-    assert set(names).issubset(set(project_names)), f"Expected at least {names} in projects: {project_names}"
+    assert set(names).issubset(set(project_names)), f"Projects missing: {names} not in {project_names}"
 
 
 def test_shell_double_pipe_or(mcp_server):
-    """Test shell error fallback with '||'."""
+    """Test shell fallback with '||'."""
     project_name = "pytest_shell_double_pipe_or"
     mcp_create_project(mcp_server, project_name)
-    # First command succeeds
+    # Command succeeds
     out1 = mcp_execute_shell(mcp_server, 'echo foo || echo bar')
     assert any("foo" in line for line in out1.splitlines()), f"Expected 'foo', got: {out1!r}"
     assert not any("bar" in line for line in out1.splitlines()), f"Unexpected 'bar': {out1!r}"
-    # First command fails
+    # Command fails
     out2 = mcp_execute_shell(mcp_server, 'false || echo fallback')
     assert any("fallback" in line for line in out2.splitlines()), f"Expected 'fallback', got: {out2!r}"
     assert not any("foo" in line for line in out2.splitlines()), f"Unexpected 'foo': {out2!r}"
 
 
 def test_shell_ls_or_echo(mcp_server):
-    """Test 'ls' fallback to echo if directory missing."""
+    """Test 'ls' fallback to echo if dir missing."""
     project_name = "pytest_shell_ls_or_echo"
     mcp_create_project(mcp_server, project_name)
     cmd = 'ls -l /run/opengl-driver/lib/ 2>/dev/null || echo "Directory not found or empty"'
     shell_output = mcp_execute_shell(mcp_server, cmd)
     assert shell_output.strip(), "Shell output should not be empty."
     if "Directory not found or empty" in shell_output:
-        assert shell_output.strip() == "Directory not found or empty", f"Fallback expected as only output, got: {shell_output!r}"
+        assert shell_output.strip() == "Directory not found or empty", f"Fallback expected, got: {shell_output!r}"
     else:
-        # Should look like a typical directory listing
-        assert any(l.strip().startswith(("d", "l", "-", "total")) for l in shell_output.splitlines()), f"Expected directory listing, got: {shell_output!r}"
+        # Directory listing expected
+        assert any(l.strip().startswith(("d", "l", "-", "total")) for l in shell_output.splitlines()), f"Expected dir listing, got: {shell_output!r}"
