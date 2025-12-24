@@ -12,6 +12,7 @@ pkgs.mkShell {
 
     if [ -t 1 ] && [ "${dontrunmenu}" != "1" ]; then
       uv run menu.py
+      exit $?
     fi
 '';
 }
