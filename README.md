@@ -36,7 +36,6 @@ $ nix-shell --run 'python src/server.py --port 8099 --projects-dir ~/dev/my-proj
 > nix-shell --argstr dontrunmenu "1"
 > ```
 
-
 The server runs locally by default, listens on the configured port, and exposes a FastMCP-compatible HTTP+JSON endpoint at `/mcp` (usually, e.g. http://localhost:8000/mcp).
 
 ## Usage/API
@@ -76,6 +75,30 @@ You communicate with the server via JSON-RPC POST requests. Example tools and th
 ```
 
 See `tests/test_mcp.py` for more programmatic usage patterns and expected outputs.
+
+## Code Quality: Linting and Type Checking
+
+This project uses both a linter and a static type checker, just like in CI. You can run these locally as follows (using the recommended Nix environment):
+
+### Linting with flake8
+
+[flake8](https://flake8.pycqa.org/) checks your code for common style, bug, and complexity issues.
+
+```sh
+nix-shell --argstr dontrunmenu "1" --run "uv run flake8 *.py src tests --count --select=E9,F63,F7,F82 --show-source --statistics && uv run flake8 *.py src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics"
+```
+
+- The first run enforces strict errors; the second provides statistics with relaxed rules (like line length and complexity), matching CI.
+
+### Type checking with pyright
+
+[pyright](https://github.com/microsoft/pyright) performs static type checking for Python.
+
+```sh
+nix-shell --argstr dontrunmenu "1" --run "uv run pyright ."
+```
+
+- This checks for type errors across the project, as in CI.
 
 ## Running Tests
 
