@@ -93,7 +93,8 @@ Tests launch the server in a subprocess, simulate real tool API requests, and cl
 **Warning: NEVER expose this server to the public internet, as it allows shell access, though strictly sandboxed per project/user.**
 
 ## License
-MIT (see LICENSE)
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 Happy grokking, and feel free to contribute or file issues!
