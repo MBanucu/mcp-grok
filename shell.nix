@@ -5,16 +5,10 @@ pkgs.mkShell {
     python312
     uv
     nodejs_latest
-    pyright
-    python312Packages.requests
   ];
 
   shellHook = ''
-    uv venv
-    source .venv/bin/activate
-    uv add "mcp[cli]"
-    uv add prompt_toolkit
-    uv add pytest
+    uv sync
     export PATH="$PWD/.venv/bin:$PWD/.bin:$PWD/bin:$PWD/node_modules/.bin:$PATH"
     alias test=".venv/bin/pytest"
 

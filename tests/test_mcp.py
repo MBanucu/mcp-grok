@@ -96,14 +96,41 @@ def mcp_execute_shell(server_url, command):
     return shell_output
 
 def test_shell_echo_path(mcp_server):
-    project_name = "pytest_combined_echo_path"
-    mcp_create_project(mcp_server, project_name)
-    shell_output = mcp_execute_shell(mcp_server, 'echo "$PATH"')
-    print(f"SHELL OUTPUT FOR ECHO PATH:\n{shell_output}\n--- END SHELL OUTPUT ---")
-    last_line = [line for line in shell_output.splitlines() if line.strip()][-1]
-    colon_count = last_line.count(":")
+    project_name = 'pytest_combined_echo_path'
+    print('========== test_shell_echo_path: BEGIN =========')
+    try:
+        print(f'Creating project: {project_name}')
+        project_dir = mcp_create_project(mcp_server, project_name)
+        print(f'Project created at: {project_dir}')
+        print(f'Project dir exists: {os.path.isdir(project_dir)}')
+    except Exception as e:
+        print(f'Exception during project creation: {e}')
+        raise
+    try:
+        print("Executing shell: echo '$PATH'")
+        shell_output = mcp_execute_shell(mcp_server, 'echo "$PATH"')
+        print('RAW SHELL OUTPUT (echo $PATH):')
+        print(shell_output)
+        print('--- END RAW SHELL OUTPUT ---')
+    except Exception as e:
+        print(f'Exception during shell exec: {e}')
+        raise
+    all_lines = [line for line in shell_output.splitlines() if line.strip()]
+    if all_lines:
+        last_line = all_lines[-1]
+    else:
+        last_line = ''
+    print(f'All shell output lines: {all_lines}')
+    print(f'Last non-empty line of shell output: {last_line!r}')
+    colon_count = last_line.count(':')
+    print(f'Colon count in last_line: {colon_count}')
+    if colon_count < 1 or colon_count > 6:
+        print(f'Warning: Colon count {colon_count} is outside expected range 1-6!')
+    if "michi" not in last_line:
+        print(f"ERROR: '$PATH' did not contain 'michi'. Path content: {last_line!r}")
     assert 1 <= colon_count <= 6, f"$PATH has {colon_count} ':'s, expected at most 6: {last_line!r}"
-    assert "michi" in last_line, f"$PATH did not contain 'michi': {last_line!r}"
+    assert 'michi' in last_line, f"$PATH did not contain 'michi': {last_line!r}"
+    print('========== test_shell_echo_path: END ==========')
 
 def test_shell_echo_user(mcp_server):
     project_name = "pytest_combined_echo_user"
