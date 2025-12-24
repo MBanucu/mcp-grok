@@ -70,7 +70,8 @@ class ShellManager:
                     proc.stdin.write(f'cd "{cwd}"\n')
                     proc.stdin.flush()
             except Exception as e:
-                return f"Error: Could not start shell: {type(e).__name__}: {str(e)}"
+                logger.error(f"Exception in start_shell (cwd={cwd}): {type(e).__name__}: {e}", exc_info=True)
+                return f"Error: Could not start shell: {type(e).__name__}: {str(e)}\nSee server log for details."
             self._shell = proc
             logger.info(f"Started clean shell in %r", cwd)
             return f"Started shell for project: {cwd}"
