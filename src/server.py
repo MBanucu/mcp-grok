@@ -12,11 +12,13 @@ from pydantic import BaseModel
 from mcp.types import ToolAnnotations
 
 # --- CONFIGURATION ---
+import getpass
+
 @dataclass
 class Config:
     projects_dir: str = os.path.expanduser('~/dev/mcp-projects')
-    shell_user: str = 'michi'
-    shell_cmd: List[str] = dataclasses.field(default_factory=lambda: ['sudo', '-u', 'michi', '--login', 'bash', '-l'])
+    shell_user: str = getpass.getuser()
+    shell_cmd: List[str] = dataclasses.field(default_factory=lambda: ['sudo', '-u', getpass.getuser(), '--login', 'bash', '-l'])
     log_file: str = 'server_audit.log'
     port: int = 8000
     default_project: str = 'default'
