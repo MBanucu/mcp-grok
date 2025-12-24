@@ -98,6 +98,16 @@ def mcp_execute_shell(server_url, command):
 def test_shell_echo_path(mcp_server):
     project_name = 'pytest_combined_echo_path'
     print('========== test_shell_echo_path: BEGIN =========')
+    def print_server_audit_log(log_path="server_audit.log", last_n=40):
+        try:
+            with open(log_path, "r") as f:
+                lines = f.readlines()
+                print("\n===== Tail of server_audit.log =====")
+                for line in lines[-last_n:]:
+                    print(line.rstrip())
+                print("===== End of server_audit.log =====\n")
+        except Exception as e:
+            print(f"Could not read server_audit.log: {e}")
     try:
         print(f'Creating project: {project_name}')
         project_dir = mcp_create_project(mcp_server, project_name)
@@ -105,6 +115,7 @@ def test_shell_echo_path(mcp_server):
         print(f'Project dir exists: {os.path.isdir(project_dir)}')
     except Exception as e:
         print(f'Exception during project creation: {e}')
+        print_server_audit_log()
         raise
     try:
         print("Executing shell: echo '$PATH'")
@@ -114,6 +125,7 @@ def test_shell_echo_path(mcp_server):
         print('--- END RAW SHELL OUTPUT ---')
     except Exception as e:
         print(f'Exception during shell exec: {e}')
+        print_server_audit_log()
         raise
     all_lines = [line for line in shell_output.splitlines() if line.strip()]
     if all_lines:
@@ -128,6 +140,7 @@ def test_shell_echo_path(mcp_server):
         print(f'Warning: Colon count {colon_count} is outside expected range 1-6!')
     if "michi" not in last_line:
         print(f"ERROR: '$PATH' did not contain 'michi'. Path content: {last_line!r}")
+    print_server_audit_log()
     assert 1 <= colon_count <= 6, f"$PATH has {colon_count} ':'s, expected at most 6: {last_line!r}"
     assert 'michi' in last_line, f"$PATH did not contain 'michi': {last_line!r}"
     print('========== test_shell_echo_path: END ==========')
