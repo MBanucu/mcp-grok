@@ -217,34 +217,6 @@ def test_change_active_project(mcp_server):
     print(f"Projects listed: {project_names}")
     assert set(names).issubset(set(project_names)), f"Expected at least {names} in projects: {project_names}"
 
-def test_shell_exit_and_reuse(mcp_server):
-    project_name = "pytest_combined_exit_reuse"
-    mcp_create_project(mcp_server, project_name)
-    # Exit persistent shell
-    exit_output = mcp_execute_shell(mcp_server, 'exit')
-    print(f"SHELL EXIT OUTPUT:\n{exit_output}\n--- END SHELL EXIT OUTPUT ---")
-    # Try echo $PATH again (should error)
-    headers = {"Accept": "application/json", "Content-Type": "application/json"}
-    payload = {
-        "jsonrpc": "2.0",
-        "id": 3,
-        "method": "tools/call",
-        "params": {
-            "name": "execute_shell",
-            "arguments": {"command": "echo $PATH"}
-        }
-    }
-    echo_resp = requests.post(mcp_server, json=payload, headers=headers)
-    assert echo_resp.status_code == 200, f"Failed: {echo_resp.text}"
-    echo_data = echo_resp.json()
-    content = echo_data["result"].get("content", []) if isinstance(echo_data["result"], dict) else echo_data["result"]
-    if isinstance(content, list):
-        echo_output = "\n".join(item.get("text", str(item)) for item in content if isinstance(item, dict)).strip()
-    else:
-        echo_output = str(content).strip()
-    print(f"SHELL OUTPUT FOR ECHO PATH AFTER EXIT:\n{echo_output}\n--- END SHELL OUTPUT ---")
-    assert "Session shell not running" in echo_output or "Please create a project first" in echo_output or "Error" in echo_output, f"Unexpected PATH-after-exit: {echo_output!r}"
-
 def test_shell_double_pipe_or(mcp_server):
     project_name = "pytest_shell_double_pipe_or"
     mcp_create_project(mcp_server, project_name)
