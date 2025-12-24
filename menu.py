@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 from typing import Optional
+
 from prompt_toolkit.shortcuts import message_dialog
 from prompt_toolkit.application import Application
 from prompt_toolkit.layout import Layout, HSplit
@@ -13,10 +14,12 @@ import menu_core
 
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 
+
 class MenuState:
     """
     Holds current process state for MCP server and proxy process.
     """
+
     def __init__(self):
         self.mcp_proc: Optional[subprocess.Popen] = None
         self.proxy_proc: Optional[subprocess.Popen] = None
@@ -43,6 +46,7 @@ class MenuState:
         menu_core.stop_proxy(self.proxy_proc)
         self.proxy_proc = None
 
+
 def handle_log_action(log_path: str, action: str, title: str) -> None:
     """Handles either viewing or clearing a log, showing appropriate dialog."""
     if action == 'view':
@@ -59,7 +63,10 @@ def handle_log_action(log_path: str, action: str, title: str) -> None:
             text=f"{title} has been cleared."
         ).run()
 
-def show_log(log_path: str, title: str, clear: bool = False) -> None:
+
+def show_log(
+    log_path: str, title: str, clear: bool = False
+) -> None:
     """
     Show or clear a log file using a dialog.
 
@@ -82,11 +89,13 @@ def show_log(log_path: str, title: str, clear: bool = False) -> None:
             content = "[Log is empty or does not exist]"
         message_dialog(title=title, text=content).run()
 
+
 class MenuApp:
     """
     Main application for interactive TUI menu for MCP project.
     Handles menu rendering, input, and command dispatch.
     """
+
     def __init__(self, state: MenuState):
         self.state = state
         self.active_index = 0
@@ -118,13 +127,17 @@ class MenuApp:
         ]
         return items
 
-    def build_buttons(self, menu_items: list[tuple[str, str]], selected: dict) -> list[Button]:
+    def build_buttons(
+        self, menu_items: list[tuple[str, str]], selected: dict
+    ) -> list[Button]:
         """
-        Build buttons for the given menu items. Each button sets selection and exits the app on press.
+        Build buttons for the given menu items. Each button sets selection and
+        exits the app on press.
 
         Args:
             menu_items (list of tuple): List of (value, label) pairs.
-            selected (dict): Dict to hold the selected value for menu result passing.
+            selected (dict): Dict to hold the selected value for menu result.
+
         Returns:
             list[Button]: List of prompt_toolkit Button widgets.
         """
@@ -132,6 +145,7 @@ class MenuApp:
         from prompt_toolkit.application import get_app
         for index, (value, label) in enumerate(menu_items):
             def make_handler(v):
+
                 def handler():
                     selected['value'] = v
                     get_app().exit()
@@ -143,7 +157,7 @@ class MenuApp:
 
     def run(self) -> None:
         """
-        Launch the menu loop. Redraws/rebuilds menu after each user action until user exits.
+        Launch the menu loop. Redraws/rebuilds menu after each user action.
         """
         while True:
             menu_items = self.get_menu_items()
@@ -164,6 +178,7 @@ class MenuApp:
                 with_background=True
             )
             kb = KeyBindings()
+
             @kb.add('down')
             def move_down(event):
                 layout = event.app.layout
@@ -175,6 +190,7 @@ class MenuApp:
                 next_i = (i + 1) % len(btns)
                 layout.focus(btns[next_i])
                 self.active_index = next_i
+
             @kb.add('up')
             def move_up(event):
                 layout = event.app.layout
@@ -218,7 +234,10 @@ class MenuApp:
         elif value == 'clear_logs_mcp':
             show_log(menu_core.MCP_LOGFILE, "MCP Server Log", clear=True)
         elif value == 'logs_proxy':
-            show_log(menu_core.PROXY_LOGFILE, "SuperAssistant Proxy Logs (tail)")
+            show_log(
+                menu_core.PROXY_LOGFILE,
+                "SuperAssistant Proxy Logs (tail)"
+            )
         elif value == 'clear_logs_proxy':
             show_log(menu_core.PROXY_LOGFILE, "Proxy Log", clear=True)
         elif value == 'vscode':
@@ -236,6 +255,7 @@ class MenuApp:
             self.state.stop_proxy()
             return False
         return True
+
 
 if __name__ == '__main__':
     state = None
