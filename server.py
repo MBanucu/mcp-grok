@@ -86,27 +86,9 @@ def execute_shell(command: str = "") -> str:
                     out = out[:8192] + "\n...[output truncated]..."
                 logger.info("SessionShell[dir=%s] cmd %r output %d bytes", session_shell_cwd, command, len(out))
                 return out
-        # No session: fallback to one-off
-        parts = shlex.split(command.strip())
-        # Run with timeout and output size limit
-        result = subprocess.run(
-            parts,
-            capture_output=True,
-            text=True,
-            timeout=180,
-            errors="replace"
-        )
-        # Truncate output if it's too long
-        out = result.stdout.strip()
-        err = result.stderr.strip()
-        if len(out) > 8192:
-            out = out[:8192] + "\n...[output truncated]..."
-        if result.returncode == 0:
-            logger.info("Executed: %r OK, output %d bytes", command, len(out))
-            return out
-        else:
-            logger.warning("Command failed: %r code=%s err: %r", command, result.returncode, err)
-            return f"Error [{result.returncode}]: {err or '(no error output)'}"
+        # No session shell: error
+        return "Error: No session shell active. You must create or activate a project first."
+
     except subprocess.TimeoutExpired:
         logger.error("Timeout: %r", command)
         return "Error: Command timed out."
