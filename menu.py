@@ -2,15 +2,15 @@ import os
 import re
 from prompt_toolkit.shortcuts import message_dialog
 from prompt_toolkit.application import Application
-from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import Layout, HSplit
 from prompt_toolkit.widgets import Button, Dialog
 from prompt_toolkit.layout.containers import WindowAlign
-from prompt_toolkit.layout.containers import WindowAlign
+
 
 import menu_core
 
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+
 
 def handle_log_action(log_path, action, title):
     if action == 'view':
@@ -22,18 +22,24 @@ def handle_log_action(log_path, action, title):
         message_dialog(title=title, text=content).run()
     elif action == 'clear':
         menu_core.clear_log(log_path)
-        message_dialog(title="Log Cleared", text=f"{title} has been cleared.").run()
+        message_dialog(
+            title="Log Cleared",
+            text=f"{title} has been cleared."
+        ).run()
+
 
 def view_logs(log_path, title):
     handle_log_action(log_path, 'view', title)
 
+
 def clear_logs(log_path, title):
     handle_log_action(log_path, 'clear', title)
+
 
 def main():
     mcp_proc = None
     proxy_proc = None
-    active_index = 0
+    active_index = 0  # Only used for focus, not externally
     try:
         while True:
             menu_items = []
@@ -42,9 +48,12 @@ def main():
             else:
                 menu_items.append(('server', 'Run MCP Server'))
             if proxy_proc and proxy_proc.poll() is None:
-                menu_items.append(('shutdown_proxy', 'Shut down SuperAssistant Proxy'))
+                menu_items.append(
+                    ('shutdown_proxy', 'Shut down SuperAssistant Proxy')
+                )
             else:
                 menu_items.append(('proxy', 'Run SuperAssistant Proxy'))
+
             menu_items += [
                 ('logs_mcp', 'View MCP Server Logs'),
                 ('clear_logs_mcp', 'Clear MCP Server Log'),
@@ -54,12 +63,17 @@ def main():
                 ('shell', 'Open Interactive Shell'),
                 ('exit', 'Exit'),
             ]
+
             # Build vertical buttons using prompt_toolkit Application
             selected = {'value': None}
             buttons = [
                 Button(
                     text=label,
-                    handler=(lambda idx=index, v=value: (selected.update({'value': v}), active_index := idx, app.exit(), None)[-1])
+                    handler=(
+                        lambda idx=index, v=value: (
+                            selected.update({'value': v}), app.exit(), None
+                        )[-1]
+                    )
                 )
                 for index, (value, label) in enumerate(menu_items)
             ]
@@ -73,13 +87,18 @@ def main():
             dialog = Dialog(
                 title='MCP Project Dev Menu',
                 body=HSplit([
-                    Label(text="Use Arrow/Tab/Shift-Tab/Up/Down to select, Enter to activate, Mouse click if supported."),
+                    Label(
+                        text=(
+                            "Use Arrow/Tab/Shift-Tab/Up/Down to select, "
+                            "Enter to activate, Mouse click if supported."
+                        ),
+                    ),
                     btn_container,
                 ], padding=1),
                 with_background=True
             )
+
             kb = KeyBindings()
-            from prompt_toolkit.layout import Window
 
             @kb.add('down')
             def move_focus_down(event):
@@ -111,7 +130,14 @@ def main():
                 nonlocal active_index
                 active_index = prev_i
 
-            app = Application(layout=Layout(dialog, focused_element=buttons[active_index].window), key_bindings=kb, full_screen=True, mouse_support=True)
+            app = Application(
+                layout=Layout(
+                    dialog, focused_element=buttons[active_index].window
+                ),
+                key_bindings=kb,
+                full_screen=True,
+                mouse_support=True,
+            )
             app.run()
             result = selected['value']
             if result == 'server':
@@ -131,7 +157,10 @@ def main():
             elif result == 'clear_logs_mcp':
                 clear_logs(menu_core.MCP_LOGFILE, "MCP Server Log")
             elif result == 'logs_proxy':
-                view_logs(menu_core.PROXY_LOGFILE, "SuperAssistant Proxy Logs (tail)")
+                view_logs(
+                    menu_core.PROXY_LOGFILE,
+                    "SuperAssistant Proxy Logs (tail)"
+                )
             elif result == 'clear_logs_proxy':
                 clear_logs(menu_core.PROXY_LOGFILE, "Proxy Log")
             elif result == 'vscode':
