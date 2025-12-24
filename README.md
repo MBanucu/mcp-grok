@@ -72,13 +72,13 @@ See `tests/test_mcp.py` for more programmatic usage patterns and expected output
 ## Running Tests
 
 ```sh
-nix-shell --run 'pytest tests'
+nix-shell --run 'uv run pytest tests'
 ```
 
 or, with your system Python and [uv](https://github.com/astral-sh/uv):
 
 ```sh
-uv sync            # Installs all dependencies from pyproject.toml/uv.lock
+uv sync --all-extras # Installs all dependencies from pyproject.toml/uv.lock
 uv run pytest tests  # Runs the tests in the managed environment
 ```
 
