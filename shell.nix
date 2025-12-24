@@ -9,10 +9,10 @@ pkgs.mkShell {
 
   shellHook = ''
     uv sync --all-extras
-    export PATH="$PWD/.venv/bin:$PWD/.bin:$PWD/bin:$PWD/node_modules/.bin:$PATH"
+    export PATH="$PWD/bin:$PATH"
 
   if [ -t 1 ]; then
-    python menu.py
+    uv run menu.py
   fi
 '';
 }

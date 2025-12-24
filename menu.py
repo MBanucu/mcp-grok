@@ -116,9 +116,9 @@ def main():
             result = selected['value']
             if result == 'server':
                 if not (mcp_proc and mcp_proc.poll() is None):
-                    mcp_proc = menu_core.start_server()
+                    mcp_proc = menu_core.server_manager.start_server()
             elif result == 'shutdown_mcp':
-                menu_core.stop_server(mcp_proc)
+                menu_core.server_manager.stop_server()
                 mcp_proc = None
             elif result == 'proxy':
                 if not (proxy_proc and proxy_proc.poll() is None):
@@ -139,19 +139,21 @@ def main():
                 os.system("code .")
             elif result == 'shell':
                 print("Starting interactive shell. Type 'exit' to leave.")
-                menu_core.stop_server(mcp_proc)
+                menu_core.server_manager.stop_server()
                 menu_core.stop_proxy(proxy_proc)
                 shell = os.environ.get("SHELL", "/bin/sh")
                 os.execvp(shell, [shell])
             elif result == 'exit' or result is None:
                 print("Exiting...")
-                menu_core.stop_server(mcp_proc)
+                menu_core.server_manager.stop_server()
                 menu_core.stop_proxy(proxy_proc)
                 break
+
     except KeyboardInterrupt:
         print("\nInterrupted.")
-        menu_core.stop_server(mcp_proc)
+        menu_core.server_manager.stop_server()
         menu_core.stop_proxy(proxy_proc)
+
 
 if __name__ == '__main__':
     main()
