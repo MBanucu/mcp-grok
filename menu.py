@@ -33,6 +33,7 @@ def clear_logs(log_path, title):
 def main():
     mcp_proc = None
     proxy_proc = None
+    active_index = 0
     try:
         while True:
             menu_items = []
@@ -58,9 +59,9 @@ def main():
             buttons = [
                 Button(
                     text=label,
-                    handler=(lambda v=value: (selected.update({'value': v}), app.exit(), None)[-1])
+                    handler=(lambda idx=index, v=value: (selected.update({'value': v}), active_index := idx, app.exit(), None)[-1])
                 )
-                for (value, label) in menu_items
+                for index, (value, label) in enumerate(menu_items)
             ]
             for btn in buttons:
                 btn.window.align = WindowAlign.LEFT
@@ -92,6 +93,8 @@ def main():
                     i = 0
                 next_i = (i + 1) % len(btn_windows)
                 layout.focus(btn_windows[next_i])
+                nonlocal active_index
+                active_index = next_i
 
             @kb.add('up')
             def move_focus_up(event):
@@ -105,8 +108,10 @@ def main():
                     i = 0
                 prev_i = (i - 1 + len(btn_windows)) % len(btn_windows)
                 layout.focus(btn_windows[prev_i])
+                nonlocal active_index
+                active_index = prev_i
 
-            app = Application(layout=Layout(dialog), key_bindings=kb, full_screen=True, mouse_support=True)
+            app = Application(layout=Layout(dialog, focused_element=buttons[active_index].window), key_bindings=kb, full_screen=True, mouse_support=True)
             app.run()
             result = selected['value']
             if result == 'server':
