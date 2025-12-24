@@ -2,7 +2,6 @@
 
 pkgs.mkShell {
   packages = with pkgs; [
-    # python312
     uv
     nodejs_latest
   ];
@@ -11,8 +10,8 @@ pkgs.mkShell {
     uv sync --all-extras
     export PATH="$PWD/bin:$PATH"
 
-  if [ -t 1 ]; then
-    uv run menu.py
-  fi
+    if [ -t 1 ]; then
+      uv run menu.py
+    fi
 '';
 }
