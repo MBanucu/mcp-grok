@@ -12,6 +12,7 @@ from menu_state import MenuState
 
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 
+
 def show_log(log_path: str, title: str, clear: bool = False) -> None:
     if clear:
         menu_core.clear_log(log_path)
@@ -26,6 +27,7 @@ def show_log(log_path: str, title: str, clear: bool = False) -> None:
         else:
             content = "[Log is empty or does not exist]"
         message_dialog(title=title, text=content).run()
+
 
 class MenuApp:
     """
@@ -130,26 +132,18 @@ class MenuApp:
                 break
 
     def handle_selection(self, value: Optional[str]) -> bool:
-        if value == 'server':
-            self.state.start_mcp()
-        elif value == 'shutdown_mcp':
-            self.state.stop_mcp()
-        elif value == 'proxy':
-            self.state.start_proxy()
-        elif value == 'shutdown_proxy':
-            self.state.stop_proxy()
-        elif value == 'logs_mcp':
-            show_log(menu_core.MCP_LOGFILE, "MCP Server Logs (tail)")
-        elif value == 'clear_logs_mcp':
-            show_log(menu_core.MCP_LOGFILE, "MCP Server Log", clear=True)
-        elif value == 'logs_proxy':
-            show_log(
-                menu_core.PROXY_LOGFILE,
-                "SuperAssistant Proxy Logs (tail)"
-            )
-        elif value == 'clear_logs_proxy':
-            show_log(menu_core.PROXY_LOGFILE, "Proxy Log", clear=True)
-        elif value == 'vscode':
+        if value in ('server', 'shutdown_mcp'):
+            return self._handle_server_action(value)
+        elif value in ('proxy', 'shutdown_proxy'):
+            return self._handle_proxy_action(value)
+        elif value in ('logs_mcp', 'clear_logs_mcp', 'logs_proxy', 'clear_logs_proxy'):
+            return self._handle_log_action(value)
+        elif value in ('vscode', 'shell', 'exit', None):
+            return self._handle_external_action(value)
+        return True
+
+    def _handle_external_action(self, value: Optional[str]) -> bool:
+        if value == 'vscode':
             print("Launching VSCode...")
             os.system("code .")
         elif value == 'shell':
@@ -163,4 +157,32 @@ class MenuApp:
             self.state.stop_mcp()
             self.state.stop_proxy()
             return False
+        return True
+
+    def _handle_server_action(self, value: Optional[str]) -> bool:
+        if value == 'server':
+            self.state.start_mcp()
+        elif value == 'shutdown_mcp':
+            self.state.stop_mcp()
+        return True
+
+    def _handle_proxy_action(self, value: Optional[str]) -> bool:
+        if value == 'proxy':
+            self.state.start_proxy()
+        elif value == 'shutdown_proxy':
+            self.state.stop_proxy()
+        return True
+
+    def _handle_log_action(self, value: Optional[str]) -> bool:
+        if value == 'logs_mcp':
+            show_log(menu_core.MCP_LOGFILE, "MCP Server Logs (tail)")
+        elif value == 'clear_logs_mcp':
+            show_log(menu_core.MCP_LOGFILE, "MCP Server Log", clear=True)
+        elif value == 'logs_proxy':
+            show_log(
+                menu_core.PROXY_LOGFILE,
+                "SuperAssistant Proxy Logs (tail)"
+            )
+        elif value == 'clear_logs_proxy':
+            show_log(menu_core.PROXY_LOGFILE, "Proxy Log", clear=True)
         return True
