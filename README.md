@@ -29,6 +29,14 @@ $ nix-shell --run 'python src/server.py'
 $ nix-shell --run 'python src/server.py --port 8099 --projects-dir ~/dev/my-projects --default-project testproject'
 ```
 
+> **Advanced:**  
+> To prevent the interactive menu from starting automatically in your nix-shell (e.g., for scripting or CI), run:
+> 
+> ```sh
+> nix-shell --argstr dontrunmenu "1"
+> ```
+
+
 The server runs locally by default, listens on the configured port, and exposes a FastMCP-compatible HTTP+JSON endpoint at `/mcp` (usually, e.g. http://localhost:8000/mcp).
 
 ## Usage/API
@@ -72,7 +80,7 @@ See `tests/test_mcp.py` for more programmatic usage patterns and expected output
 ## Running Tests
 
 ```sh
-nix-shell --run 'uv run pytest tests'
+nix-shell --argstr dontrunmenu "1" --run 'uv run pytest tests'
 ```
 
 Tests launch the server in a subprocess, simulate real tool API requests, and clean up after themselves. All main features are covered, including project management, shell execution, API error handling, and session management.

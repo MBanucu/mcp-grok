@@ -1,4 +1,4 @@
-{ pkgs ? import <nixpkgs> {} }:
+{ pkgs ? import <nixpkgs> {}, dontrunmenu ? "" }:
 
 pkgs.mkShell {
   packages = with pkgs; [
@@ -10,7 +10,7 @@ pkgs.mkShell {
     uv sync --all-extras
     export PATH="$PWD/bin:$PATH"
 
-    if [ -t 1 ]; then
+    if [ -t 1 ] && [ "${dontrunmenu}" != "1" ]; then
       uv run menu.py
     fi
 '';
