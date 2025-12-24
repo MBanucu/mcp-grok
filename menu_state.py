@@ -2,6 +2,7 @@ import subprocess
 from typing import Optional
 import menu_core
 
+
 class MenuState:
     """
     Holds current process state for MCP server and proxy process.
