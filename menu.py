@@ -5,6 +5,8 @@ from prompt_toolkit.application import Application
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import Layout, HSplit
 from prompt_toolkit.widgets import Button, Dialog
+from prompt_toolkit.layout.containers import WindowAlign
+from prompt_toolkit.layout.containers import WindowAlign
 
 import menu_core
 
@@ -53,16 +55,16 @@ def main():
             ]
             # Build vertical buttons using prompt_toolkit Application
             selected = {'value': None}
-            def make_handler(val):
-                return lambda: (setattr(selected, 'value', val), app.exit())
             buttons = [
-                Button(text=label, handler=lambda v=value: (selected.update({'value': v}), app.exit()))
+                Button(
+                    text=label,
+                    handler=(lambda v=value: (selected.update({'value': v}), app.exit(), None)[-1])
+                )
                 for (value, label) in menu_items
             ]
             for btn in buttons:
-                btn.window.align = "left"
+                btn.window.align = WindowAlign.LEFT
 
-            from prompt_toolkit.widgets import Label
             from prompt_toolkit.widgets import Label
             from prompt_toolkit.key_binding import KeyBindings
 
