@@ -1,12 +1,11 @@
 import logging
 import subprocess
-import shlex
 import os
 import threading
 import time
 import dataclasses
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 from mcp.types import ToolAnnotations
@@ -14,14 +13,20 @@ from mcp.types import ToolAnnotations
 # --- CONFIGURATION ---
 import getpass
 
+
 @dataclass
 class Config:
     projects_dir: str = os.path.expanduser('~/dev/mcp-projects')
     shell_user: str = getpass.getuser()
-    shell_cmd: List[str] = dataclasses.field(default_factory=lambda: ['sudo', '-u', getpass.getuser(), '--login', 'bash', '-l'])
+    shell_cmd: List[str] = dataclasses.field(
+        default_factory=lambda: [
+            'sudo', '-u', getpass.getuser(), '--login', 'bash', '-l'
+        ]
+    )
     log_file: str = 'server_audit.log'
     port: int = 8000
     default_project: str = 'default'
+
 
 config = Config()
 
@@ -37,6 +42,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # --- SESSION SHELL MANAGEMENT ---
+
+
 class ShellManager:
     def __init__(self, cfg: Config):
         self.cfg = cfg
@@ -77,9 +84,11 @@ class ShellManager:
             self._shell = proc
             pid = getattr(proc, 'pid', None)
             poll_status = proc.poll()
-            logger.info(f"Started clean shell in %r with PID=%s, initial poll()=%s", cwd, pid, poll_status)
+            logger.info("Started clean shell in %r with PID=%s, initial poll()=%s", cwd, pid, poll_status)
             if poll_status is not None:
-                logger.warning(f"Shell process for %r exited immediately with poll()=%r, returncode=%r", cwd, poll_status, proc.returncode)
+                logger.warning(
+                    f"Shell process for {cwd!r} exited immediately with poll()={poll_status!r}, "
+                    f"returncode={proc.returncode!r}")
             return f"Started shell for project: {cwd}"
 
     def stop_shell(self):
@@ -88,59 +97,86 @@ class ShellManager:
                 self._shell.kill()
             self._shell = None
             self._cwd = None
-            logger.info(f"Stopped shell")
+            logger.info("Stopped shell")
+
+    def _get_shell_pipes(self, proc):
+        if not proc:
+            return None, None, "Session shell communication pipe is not available."
+        stdin = getattr(proc, 'stdin', None)
+        stdout = getattr(proc, 'stdout', None)
+        if stdin is None or stdout is None:
+            return None, None, "Session shell communication pipe is not available."
+        return stdin, stdout, None
+
+    def _read_shell_output(self, stdout):
+        out_lines = []
+        t0 = time.time()
+        while True:
+            line = stdout.readline()
+            if not line:
+                break
+            if line.rstrip() == "__MCP_END__":  # Output delimiter
+                break
+            out_lines.append(line)
+            if time.time() - t0 > 180:
+                return None, "Error: Shell command timed out."
+        return "".join(out_lines).strip(), None
 
     def execute(self, command: str) -> str:
         with self._shell_lock:
             if not self.is_active():
-                logger.error(f"Session shell not active when attempting to execute command. _shell={self._shell}, _cwd={self._cwd}, poll={getattr(self._shell, 'poll', lambda : None)() if self._shell else None}")
+                logger.error(
+                    "Session shell not active when attempting to execute command. "
+                    "_shell=%r, _cwd=%r, poll=%r",
+                    self._shell, self._cwd, getattr(self._shell, 'poll', lambda: None)() if self._shell else None
+                )
                 return "Error: No session shell active. You must create or activate a project first."
             proc = self._shell
             try:
-                if not proc or getattr(proc, 'stdin', None) is None or getattr(proc, 'stdout', None) is None:
-                    return "Session shell communication pipe is not available."
-                stdin = getattr(proc, 'stdin', None)
-                if not stdin:
+                stdin, stdout, pipe_err = self._get_shell_pipes(proc)
+                if pipe_err:
+                    return pipe_err
+                if stdin is None or stdout is None:
                     return "Session shell communication pipe is not available."
                 stdin.write(command.strip() + "\n")
-                stdin.write('echo __MCP_END__\n')
+                stdin.write('echo __MCP_END__\n')  # MCP output delimiter
                 stdin.flush()
-                out_lines = []
-                t0 = time.time()
-                stdout = getattr(proc, 'stdout', None)
-                if not stdout:
-                    return "Session shell communication pipe is not available."
-                while True:
-                    line = stdout.readline()
-                    if not line:
-                        break
-                    if line.rstrip() == "__MCP_END__":
-                        break
-                    out_lines.append(line)
-                    if time.time() - t0 > 180:
-                        return "Error: Shell command timed out."
-                out = "".join(out_lines).strip()
+                out, read_err = self._read_shell_output(stdout)
+                if read_err:
+                    return read_err
             except Exception as e:
                 return f"Shell session error: {type(e).__name__}: {str(e)}"
+            if not out:
+                out = ""
             if len(out) > 8192:
-                out = out[:8192] + "\n...[output truncated]..."
-            logger.info("SessionShell[dir=%s] cmd %r output %d bytes", self._cwd, command, len(out))
+                out = out[:8192] + "\n...[output truncated]..."  # Truncate long output
+            logger.info(
+                "SessionShell[dir=%s] cmd %r output %d bytes",
+                self._cwd, command, len(out)
+            )
             return out
+
 
 shell_manager = ShellManager(config)
 
 # --- PROJECT MANAGEMENT HELPERS ---
+
+
 def safe_project_name(name: str) -> bool:
     import re
     return re.match(r'^[a-zA-Z0-9_.-]+$', name) is not None
 
+
 def project_path(name: str) -> str:
     return os.path.join(config.projects_dir, name)
+
 
 def ensure_projects_dir():
     os.makedirs(config.projects_dir, exist_ok=True)
 
 # --- MCP SERVER SETUP ---
+
+
 mcp = FastMCP(
     "ConsoleAccessServer",
     instructions="Console tool. Run shell commands in persistent project shells.",
@@ -148,9 +184,11 @@ mcp = FastMCP(
     json_response=True,
 )
 
+
 class ActiveProjectInfo(BaseModel):
     name: str
     path: str
+
 
 @mcp.tool(title="Execute Any Shell Command", annotations=ToolAnnotations(readOnlyHint=False, openWorldHint=False))
 def execute_shell(command: str = "") -> str:
@@ -164,6 +202,7 @@ def execute_shell(command: str = "") -> str:
         return "Error: Command cannot be empty."
     return shell_manager.execute(command)
 
+
 @mcp.tool(title="Get Active Project")
 def get_active_project() -> ActiveProjectInfo:
     """
@@ -173,6 +212,7 @@ def get_active_project() -> ActiveProjectInfo:
     name = os.path.basename(cwd) if cwd and os.path.isdir(cwd) else ""
     path = cwd if cwd and os.path.isdir(cwd) else ""
     return ActiveProjectInfo(name=name, path=path)
+
 
 @mcp.tool(title="List All Projects")
 def list_all_projects() -> list:
@@ -184,6 +224,7 @@ def list_all_projects() -> list:
         name for name in os.listdir(config.projects_dir)
         if os.path.isdir(os.path.join(config.projects_dir, name))
     ])
+
 
 @mcp.tool(title="Create New Project")
 def create_new_project(project_name: str) -> str:
@@ -199,6 +240,7 @@ def create_new_project(project_name: str) -> str:
     shell_manager.stop_shell()
     return shell_manager.start_shell(proj_path)
 
+
 @mcp.tool(title="Change Active Project")
 def change_active_project(project_name: str) -> str:
     """
@@ -209,17 +251,26 @@ def change_active_project(project_name: str) -> str:
         return "Error: Unsafe project name. Only letters, numbers, _ . - allowed."
     proj_path = project_path(project_name)
     if not os.path.isdir(proj_path):
-        return f"Error: Project directory does not exist: {proj_path}"
+        return (
+            "Error: Project directory does not exist: {}".format(proj_path)
+        )
     shell_manager.stop_shell()
     return shell_manager.start_shell(proj_path)
 
 # --- ENTRY POINT ---
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8000, help='Port to run MCP server on')
-    parser.add_argument('--projects-dir', type=str, default=config.projects_dir, help='Base directory for MCP projects')
-    parser.add_argument('--default-project', type=str, default=config.default_project, help='Name for the default project to activate on server start')
+    parser.add_argument(
+        '--projects-dir', type=str, default=config.projects_dir, help='Base directory for MCP projects'
+    )
+    parser.add_argument(
+        '--default-project', type=str, default=config.default_project,
+        help='Name for the default project to activate on server start'
+    )
     args = parser.parse_args()
     config.port = args.port
     config.projects_dir = os.path.expanduser(args.projects_dir)
@@ -227,15 +278,30 @@ def main():
     ensure_projects_dir()
     default_proj_path = project_path(config.default_project)
     if not os.path.exists(default_proj_path):
-        logger.info(f"Server startup: default project '{config.default_project}' does not exist. Creating new project.")
+        logger.info(
+            "Server startup: default project '%s' does not exist. "
+            "Creating new project.",
+            config.default_project
+        )
         result = create_new_project(config.default_project)
-        logger.info(f"Default project creation result: {result}")
+        logger.info(
+            "Default project creation result: %s",
+            result)
+
     else:
-        logger.info(f"Server startup: default project '{config.default_project}' exists. Activating.")
+        logger.info(
+            "Server startup: default project '%s' exists. "
+            "Activating.",
+            config.default_project
+        )
         result = change_active_project(config.default_project)
-        logger.info(f"Default project activation result: {result}")
+        logger.info(
+            "Default project activation result: %s",
+            result)
+
     mcp.settings.port = config.port
     mcp.run(transport="streamable-http")
+
 
 if __name__ == "__main__":
     main()
