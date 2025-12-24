@@ -19,6 +19,7 @@ DEV_ROOT = os.path.join(USER_HOME, "dev", "mcp-projects-test")
 
 # --- Fixtures & Helpers ---
 
+
 @pytest.fixture(scope="module")
 def mcp_server():
     """Start MCP server and clean up dev root on teardown."""
@@ -40,7 +41,9 @@ def mcp_server():
         if os.path.exists(DEV_ROOT):
             shutil.rmtree(DEV_ROOT)
 
+
 # --- Internal Helpers ---
+
 def _wait_for_server_ready(server_proc, timeout=30):
     start_time = time.time()
     if server_proc.stdout is None:
@@ -59,6 +62,7 @@ def _wait_for_server_ready(server_proc, timeout=30):
                 continue
             if "Uvicorn running on http://" in line or "Uvicorn running on http://127.0.0.1" in line:
                 return
+
 
 def mcp_create_project(server_url, project_name):
     """Create project via MCP API."""
@@ -80,6 +84,7 @@ def mcp_create_project(server_url, project_name):
     assert os.path.isdir(test_dir), f"Project dir not created: {test_dir}"
     return test_dir
 
+
 def mcp_execute_shell(server_url, command):
     """Run shell command via MCP API."""
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -97,17 +102,22 @@ def mcp_execute_shell(server_url, command):
     data = resp.json()
     return _extract_shell_output(data["result"])
 
+
 def _extract_shell_output(result):
     content = result.get("content", result) if isinstance(result, dict) else result
     if isinstance(content, list):
-        return "\n".join(item.get("text", str(item)) for item in content if isinstance(item, dict)).strip()
+        return "\n".join(
+            item.get("text", str(item)) for item in content if isinstance(item, dict)
+        ).strip()
     return str(content).strip()
+
 
 def get_last_non_empty_line(output):
     lines = [line for line in output.splitlines() if line.strip()]
     return lines[-1] if lines else ""
 
 # --- Test Cases ---
+
 
 def test_shell_echo_path(mcp_server):
     """Echo $PATH env var, must contain ':' ."""
@@ -241,4 +251,7 @@ def test_shell_ls_or_echo(mcp_server):
         assert shell_output.strip() == "Directory not found or empty", f"Fallback expected, got: {shell_output!r}"
     else:
         # Directory listing expected
-        assert any(l.strip().startswith(("d", "l", "-", "total")) for l in shell_output.splitlines()), f"Expected dir listing, got: {shell_output!r}"
+        assert any(
+            line.strip().startswith(("d", "l", "-", "total"))
+            for line in shell_output.splitlines()
+        ), f"Expected dir listing, got: {shell_output!r}"
