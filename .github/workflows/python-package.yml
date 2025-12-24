@@ -20,6 +20,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Add bin/ to PATH
+      run: echo "${GITHUB_WORKSPACE}/bin" >> $GITHUB_PATH
+
     - name: Install uv and set the Python version
       uses: astral-sh/setup-uv@v7
       with:
