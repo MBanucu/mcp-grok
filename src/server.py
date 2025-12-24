@@ -73,7 +73,11 @@ class ShellManager:
                 logger.error(f"Exception in start_shell (cwd={cwd}): {type(e).__name__}: {e}", exc_info=True)
                 return f"Error: Could not start shell: {type(e).__name__}: {str(e)}\nSee server log for details."
             self._shell = proc
-            logger.info(f"Started clean shell in %r", cwd)
+            pid = getattr(proc, 'pid', None)
+            poll_status = proc.poll()
+            logger.info(f"Started clean shell in %r with PID=%s, initial poll()=%s", cwd, pid, poll_status)
+            if poll_status is not None:
+                logger.warning(f"Shell process for %r exited immediately with poll()=%r, returncode=%r", cwd, poll_status, proc.returncode)
             return f"Started shell for project: {cwd}"
 
     def stop_shell(self):
@@ -87,6 +91,7 @@ class ShellManager:
     def execute(self, command: str) -> str:
         with self._shell_lock:
             if not self.is_active():
+                logger.error(f"Session shell not active when attempting to execute command. _shell={self._shell}, _cwd={self._cwd}, poll={getattr(self._shell, 'poll', lambda : None)() if self._shell else None}")
                 return "Error: No session shell active. You must create or activate a project first."
             proc = self._shell
             try:
