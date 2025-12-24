@@ -94,7 +94,7 @@ Tests launch the server in a subprocess, simulate real tool API requests, and cl
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+This project is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for details.
 
 ---
 Happy grokking, and feel free to contribute or file issues!
