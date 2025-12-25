@@ -1,6 +1,6 @@
 import subprocess
 from typing import Optional
-import menu_core
+from . import menu_core
 
 
 class MenuState:

@@ -21,7 +21,7 @@ pkgs.mkShell {
     echo "uv     python version = $(uv run python --version)"
     echo "system python version = $(python --version)"
     if [ -t 1 ] && [ "${dontrunmenu}" != "1" ]; then
-      uv run src/menu/menu.py
+      uv run python -m menu.menu
       exit $?
     fi
   '';

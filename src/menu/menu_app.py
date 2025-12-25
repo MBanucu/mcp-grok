@@ -7,8 +7,8 @@ from prompt_toolkit.layout import Layout, HSplit
 from prompt_toolkit.widgets import Button, Dialog, Label
 from prompt_toolkit.layout.containers import WindowAlign
 from prompt_toolkit.key_binding import KeyBindings
-import menu_core
-from menu_state import MenuState
+from . import menu_core
+from .menu_state import MenuState
 
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 

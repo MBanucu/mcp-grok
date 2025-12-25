@@ -1,8 +1,8 @@
 import re
 from prompt_toolkit.shortcuts import message_dialog
-import menu_core
-from menu_state import MenuState
-from menu_app import MenuApp
+from . import menu_core
+from .menu_state import MenuState
+from .menu_app import MenuApp
 
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 
