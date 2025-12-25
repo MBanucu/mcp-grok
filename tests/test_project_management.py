@@ -4,6 +4,7 @@ import subprocess
 import time
 import shutil
 import requests
+import pytest
 
 from test_utils import mcp_create_project, mcp_execute_shell
 
@@ -24,6 +25,7 @@ def build_tools_call_payload(name, arguments=None, id=1):
     return p
 
 
+@pytest.mark.usefixtures("mcp_server")
 def test_get_active_project(mcp_server):
     """Verify that get_active_project returns the correct info after project creation."""
     project_name = "proj_active_test"
@@ -40,6 +42,7 @@ def test_get_active_project(mcp_server):
     assert path and path.endswith(project_name), f"Path mismatch: {path!r}"
 
 
+@pytest.mark.usefixtures("mcp_server")
 def test_change_active_project(mcp_server):
     """Verify that changing the active project works and is reflected everywhere."""
     project_a = "projA"
@@ -86,8 +89,6 @@ def test_change_active_project(mcp_server):
         project_names = result
     assert set(names).issubset(set(project_names)), f"Projects missing: {names} not in {project_names}"
 
-
-# ---- moved from test_server_default_project.py ----
 
 def start_server(projects_dir, port, default_project):
     """Start the server process with the given parameters."""
@@ -165,6 +166,7 @@ def cleanup_server(server_proc, projects_dir):
     shutil.rmtree(projects_dir, ignore_errors=True)
 
 
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
 def test_default_project_activation():
     """
     Test that starting the server with --default-project activates/creates that project.
