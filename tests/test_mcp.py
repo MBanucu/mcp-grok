@@ -181,7 +181,9 @@ def test_change_active_project(mcp_server):
     assert resp.status_code == 200, f"Change active project failed: {resp.text}"
     try:
         result = resp.json()["result"]["structuredContent"]["result"]
-        assert result.startswith(f"Started shell for project: "), f"Response did not start with expected text. resp.text={resp.text}"
+        assert result.startswith("Started shell for project: "), (
+            f"Response did not start with expected text. resp.text={resp.text}"
+        )
         assert project_a in result, f"Expected '{project_a}' in result. resp.text={resp.text}"
     except KeyError as e:
         raise AssertionError(f"KeyError {e} when accessing response JSON. Full response: {resp.text}") from e
