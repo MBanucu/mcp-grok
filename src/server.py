@@ -4,10 +4,10 @@ from src.shell_manager import ShellManager
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 from mcp.types import ToolAnnotations
-
+import os
+import pathlib
 
 config = Config()
-
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,25 +20,20 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
 shell_manager = ShellManager(config)
-
 
 # --- PROJECT MANAGEMENT HELPERS ---
 def safe_project_name(name: str) -> bool:
     import re
     return re.match(r'^[a-zA-Z0-9_.-]+$', name) is not None
 
-
 def project_path(name: str) -> str:
     import os
     return os.path.join(config.projects_dir, name)
 
-
 def ensure_projects_dir():
     import os
     os.makedirs(config.projects_dir, exist_ok=True)
-
 
 # --- MCP SERVER SETUP ---
 mcp = FastMCP(
@@ -51,11 +46,9 @@ mcp = FastMCP(
     json_response=True,
 )
 
-
 class ActiveProjectInfo(BaseModel):
     name: str
     path: str
-
 
 @mcp.tool(
     title="Execute Any Shell Command",
@@ -73,7 +66,6 @@ def execute_shell(command: str = "") -> str:
         return "Error: Command cannot be empty."
     return shell_manager.execute(command)
 
-
 @mcp.tool(title="Get Active Project")
 def get_active_project() -> ActiveProjectInfo:
     """
@@ -84,7 +76,6 @@ def get_active_project() -> ActiveProjectInfo:
     name = os.path.basename(cwd) if cwd and os.path.isdir(cwd) else ""
     path = cwd if cwd and os.path.isdir(cwd) else ""
     return ActiveProjectInfo(name=name, path=path)
-
 
 @mcp.tool(title="List All Projects")
 def list_all_projects() -> list:
@@ -97,7 +88,6 @@ def list_all_projects() -> list:
         name for name in os.listdir(config.projects_dir)
         if os.path.isdir(os.path.join(config.projects_dir, name))
     ])
-
 
 @mcp.tool(title="Create New Project")
 def create_new_project(project_name: str) -> str:
@@ -117,7 +107,6 @@ def create_new_project(project_name: str) -> str:
         os.makedirs(proj_path, exist_ok=True)
     shell_manager.stop_shell()
     return shell_manager.start_shell(proj_path)
-
 
 @mcp.tool(title="Change Active Project")
 def change_active_project(project_name: str) -> str:
@@ -140,9 +129,60 @@ def change_active_project(project_name: str) -> str:
     shell_manager.stop_shell()
     return shell_manager.start_shell(proj_path)
 
+# --- NEW - READ FILE TOOL ---
+@mcp.tool(
+    title="Read File Anywhere",
+    annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=True)
+)
+def read_file(file_path: str, limit: int = 2000, offset: int = 0) -> str:
+    """
+    Read and return up to `limit` lines from `file_path`, starting at line `offset`,
+    anywhere on the filesystem. Returns file content as text, or an error string if
+    the file is not found, is too large, is a directory, or appears binary.
+    - Files anywhere on the system can be accessed (subject to server process permissions).
+    - `limit` (max lines): default 2000, hard capped at 5000. Offset must be >= 0.
+    - Reading directories is blocked. Large/binary file detection is enforced.
+    """
+    try:
+        abs_fp = pathlib.Path(file_path).expanduser().resolve()
+        if not abs_fp.exists() or not abs_fp.is_file():
+            return f"Error: File does not exist or is not a file: {abs_fp}"
+        if abs_fp.stat().st_size > 10 * 1024 * 1024:
+            return "Error: File too large (>10MB)."
+        # Try to determine if binary
+        try:
+            with open(abs_fp, "rb") as f:
+                sample = f.read(512)
+                if b"\0" in sample:
+                    return "Error: File appears to be binary."
+        except Exception as e:
+            return f"Error: Cannot check if file is binary: {type(e).__name__}: {e}"
+        # Read text lines
+        max_lines = min(5000, max(1, limit))
+        start = max(0, offset)
+        content_lines = []
+        lines_read = 0
+        truncated = False
+        try:
+            with open(abs_fp, "r", encoding="utf-8", errors="replace") as f:
+                for idx, line in enumerate(f):
+                    if idx < start:
+                        continue
+                    if lines_read >= max_lines:
+                        truncated = True
+                        break
+                    content_lines.append(line.rstrip("\n\r"))
+                    lines_read += 1
+        except Exception as e:
+            return f"Error: Could not read file: {type(e).__name__}: {e}"
+        out = "\n".join(content_lines)
+        if truncated:
+            out += "\n...[output truncated]..."
+        return out.strip()
+    except Exception as e:
+        return f"Error: Unexpected error in read_file: {type(e).__name__}: {e}"
+
 # --- ENTRY POINT ---
-
-
 def main():
     import argparse
     parser = argparse.ArgumentParser()
@@ -181,7 +221,6 @@ def main():
         logger.info(f"Default project activation result: {result}")
     mcp.settings.port = config.port
     mcp.run(transport="streamable-http")
-
 
 if __name__ == "__main__":
     main()
