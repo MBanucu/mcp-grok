@@ -91,6 +91,7 @@ def api_read_file(server_url, file_path):
 
 # --- Main tests: overwrite, replace, insert, edge, delete ---
 
+
 def test_write_whole_file(tmp_path, mcp_server):
     test_file = tmp_path / "write_all.txt"
     server_url = mcp_server
@@ -115,6 +116,7 @@ def test_write_replace_lines(tmp_path, mcp_server):
     after = Path(test_file).read_text()
     assert after == "zero\nONE\nTWO\nthree\nfour\n"
 
+
 def test_write_insert_lines(tmp_path, mcp_server):
     test_file = tmp_path / "insert.txt"
     Path(test_file).write_text("a\nb\nd\n")
@@ -127,6 +129,7 @@ def test_write_insert_lines(tmp_path, mcp_server):
     assert "Inserted at line 2" in out
     after = Path(test_file).read_text()
     assert after == "a\nb\nc1\nc2\nd\n"
+
 
 def test_write_insert_at_end(tmp_path, mcp_server):
     test_file = tmp_path / "insert-end.txt"
@@ -141,6 +144,7 @@ def test_write_insert_at_end(tmp_path, mcp_server):
     after = Path(test_file).read_text()
     assert after == "a\nb\nc\n\n\n\n\n\n\n\nd\ne\n"
 
+
 def test_write_insert_and_replace_mutually_exclusive(tmp_path, mcp_server):
     test_file = tmp_path / "exclusive.txt"
     Path(test_file).write_text("one\ntwo\n")
@@ -154,6 +158,7 @@ def test_write_insert_and_replace_mutually_exclusive(tmp_path, mcp_server):
     )
     assert "Cannot specify both" in out or "Error" in out
 
+
 def test_write_nonexistent_file_insert(tmp_path, mcp_server):
     test_file = tmp_path / "insert-new.txt"
     out = api_write_file(
@@ -166,6 +171,7 @@ def test_write_nonexistent_file_insert(tmp_path, mcp_server):
     result = api_read_file(mcp_server, str(test_file))
     assert result.strip() == "foo\nbar"
 
+
 def test_write_nonexistent_file_replace(tmp_path, mcp_server):
     test_file = tmp_path / "replace-new.txt"
     out = api_write_file(
@@ -176,6 +182,7 @@ def test_write_nonexistent_file_replace(tmp_path, mcp_server):
         replace_lines_end=1,
     )
     assert "does not exist" in out or "error" in out.lower()
+
 
 def test_write_negative_insert(tmp_path, mcp_server):
     test_file = tmp_path / "neg-insert.txt"
@@ -190,6 +197,7 @@ def test_write_negative_insert(tmp_path, mcp_server):
     after = Path(test_file).read_text()
     assert after.startswith("FIRST\n")
 
+
 def test_write_invalid_range(tmp_path, mcp_server):
     test_file = tmp_path / "invalidrange.txt"
     Path(test_file).write_text("x\ny\n")
@@ -203,6 +211,8 @@ def test_write_invalid_range(tmp_path, mcp_server):
     assert "Invalid line range" in out or "error" in out.lower()
 
 # --- Replace from file start (start=0) ---
+
+
 def test_write_replace_start_at_zero(tmp_path, mcp_server):
     test_file = tmp_path / "replace-at-zero.txt"
     Path(test_file).write_text("a\nb\nc\nd\n")
@@ -218,7 +228,9 @@ def test_write_replace_start_at_zero(tmp_path, mcp_server):
     after = Path(test_file).read_text()
     assert after == "X\nY\nc\nd\n"
 
+
 # --- Replace with content length mismatch (expand/shrink) ---
+
 def test_write_replace_fewer_lines_than_range(tmp_path, mcp_server):
     test_file = tmp_path / "replace-fewer.txt"
     Path(test_file).write_text("a\nb\nc\nd\ne\nf\n")
@@ -234,6 +246,7 @@ def test_write_replace_fewer_lines_than_range(tmp_path, mcp_server):
     after = Path(test_file).read_text()
     # a (then replace lines 1 to 4 with X), then f left
     assert after == "a\nX\nf\n"
+
 
 def test_write_replace_more_lines_than_range(tmp_path, mcp_server):
     test_file = tmp_path / "replace-more.txt"
@@ -251,7 +264,9 @@ def test_write_replace_more_lines_than_range(tmp_path, mcp_server):
     # a b (replace c, d with 5 lines), then e f left
     assert after == "a\nb\nL1\nL2\nL3\nL4\nL5\ne\nf\n"
 
+
 # --- Delete lines tests ---
+
 def test_write_delete_lines(tmp_path, mcp_server):
     test_file = tmp_path / "delete-lines.txt"
     Path(test_file).write_text("one\ntwo\nthree\nfour\nfive\n")
@@ -265,6 +280,7 @@ def test_write_delete_lines(tmp_path, mcp_server):
     assert "Deleted" in out
     after = Path(test_file).read_text()
     assert after == "one\nfour\nfive\n"
+
 
 def test_write_replace_lines_with_whitespace(tmp_path, mcp_server):
     test_file = tmp_path / "replace-lines-ws.txt"
@@ -296,6 +312,7 @@ def test_write_delete_beyond_eof(tmp_path, mcp_server):
     assert "Deleted" in out
     after = Path(test_file).read_text()
     assert after == "1\n2\n"
+
 
 def test_write_delete_entire_file(tmp_path, mcp_server):
     test_file = tmp_path / "delete-entire.txt"
