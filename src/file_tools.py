@@ -152,16 +152,31 @@ def _validate_write_permissions(abs_fp, content, overwrite):
     return None
 
 
+def _do_full_replace(abs_fp, content):
+    try:
+        with open(abs_fp, "w", encoding="utf-8") as f:
+            f.write(content)
+        return f"Success: File fully replaced in {abs_fp}"
+    except Exception as e:
+        return f"Error: Failed to replaceAll: {type(e).__name__}: {e}"
+
+
 def write_file(
     file_path: str,
     content: str,
     overwrite: bool = True,
     replace_lines_start: Optional[int] = None,
     replace_lines_end: Optional[int] = None,
-    insert_at_line: Optional[int] = None
+    insert_at_line: Optional[int] = None,
+    replaceAll: bool = False
 ) -> str:
     """
     Write `content` to the specified `file_path`. Will overwrite by default.
+
+    If replaceAll=True, the entire contents of the target file will be
+    replaced with the given `content`, regardless of any line or range
+    arguments. This is equivalent to a full overwrite from start to end of file.
+    Default is False, preserving previous line/insert replacement behavior.
 
     Line indices:
     - All line numbers/indices (`replace_lines_start`, `replace_lines_end`,
@@ -175,9 +190,7 @@ def write_file(
     Protections:
     - Canonicalizes/resolves file_path.
       Refuses if writing outside the server's permissions.
-
     - Won't overwrite if `overwrite=False` and file exists.
-
     - Refuses to write >10MB at once. Enforces UTF-8 encoding.
     - Won't write to device nodes, symlinks, or system directories.
     - Reports all errors with clear reason.
@@ -188,15 +201,25 @@ def write_file(
         if validation_err:
             return validation_err
         abs_fp.parent.mkdir(parents=True, exist_ok=True)
-        if (replace_lines_start is not None and replace_lines_end is not None) and insert_at_line is not None:
+
+        if (
+            replace_lines_start is not None and replace_lines_end is not None
+        ) and insert_at_line is not None:
             return "Error: Cannot specify both replace_lines and insert_at_line."
+
         if replace_lines_start is not None and replace_lines_end is not None:
             if not abs_fp.exists() or not abs_fp.is_file():
                 return f"Error: File does not exist for line replacement: {abs_fp}"
-            return _write_replace_lines(abs_fp, content, replace_lines_start, replace_lines_end)
+            return _write_replace_lines(
+                abs_fp, content, replace_lines_start, replace_lines_end
+            )
+
         if insert_at_line is not None:
             return _write_insert_at_line(abs_fp, content, insert_at_line)
-        return _do_write_file(abs_fp, content, overwrite)
 
+        if replaceAll:
+            return _do_full_replace(abs_fp, content)
+
+        return _do_write_file(abs_fp, content, overwrite)
     except Exception as e:
         return f"Error: Unexpected error in write_file: {type(e).__name__}: {e}"

@@ -327,3 +327,20 @@ def test_write_delete_entire_file(tmp_path, mcp_server):
     assert "Deleted" in out
     after = Path(test_file).read_text()
     assert after == ""
+
+
+def test_write_replaceall_full_file_overwrite(tmp_path, mcp_server):
+    test_file = tmp_path / "replaceAll.txt"
+    Path(test_file).write_text("foo bar foo FOO Foo foo\n")
+    server_url = mcp_server
+    # replaceAll should fully overwrite the file with given content
+    out = api_write_file(server_url, str(test_file), "AAAAA", replaceAll=True)
+    assert "Success" in out or "replaced" in out or "fully replaced" in out
+    after = Path(test_file).read_text()
+    assert after == "AAAAA"
+    # Write different file, confirm again
+    Path(test_file).write_text("BBBBB\nCCCCC\n")
+    out2 = api_write_file(server_url, str(test_file), "ZZZZ", replaceAll=True)
+    assert "Success" in out2 or "replaced" in out2 or "fully replaced" in out2
+    after2 = Path(test_file).read_text()
+    assert after2 == "ZZZZ"

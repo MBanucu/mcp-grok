@@ -170,10 +170,16 @@ def write_file(
     overwrite: bool = True,
     replace_lines_start: Optional[int] = None,
     replace_lines_end: Optional[int] = None,
-    insert_at_line: Optional[int] = None
+    insert_at_line: Optional[int] = None,
+    replaceAll: bool = False
 ) -> str:
     """
     Write `content` to the specified `file_path`. Will overwrite by default, and supports advanced line replacement/insertion.
+
+    If replaceAll=True, the entire contents of the target file will be
+    replaced with the given `content`, regardless of any line or range
+    arguments. This is equivalent to a full overwrite from start to end of file.
+    Default is False, preserving previous line/insert replacement behavior.
 
     Line index behavior:
     - All line numbers (`replace_lines_start`, `replace_lines_end`, `insert_at_line`) are 0-based (first line is 0).
@@ -195,6 +201,7 @@ def write_file(
         replace_lines_start,
         replace_lines_end,
         insert_at_line,
+        replaceAll,
     )
 
 
