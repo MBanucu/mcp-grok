@@ -1,7 +1,6 @@
 import pathlib
 from typing import Optional
-from mcp.types import ToolAnnotations
-import os
+
 
 def read_file(file_path: str, limit: int = 2000, offset: int = 0) -> str:
     """
@@ -47,9 +46,11 @@ def read_file(file_path: str, limit: int = 2000, offset: int = 0) -> str:
         out = "\n".join(content_lines)
         if truncated:
             out += "\n...[output truncated]..."
+
         return out.strip()
     except Exception as e:
         return f"Error: Unexpected error in read_file: {type(e).__name__}: {e}"
+
 
 def write_file(
     file_path: str,
@@ -63,14 +64,20 @@ def write_file(
     Write `content` to the specified `file_path`. Will overwrite by default.
 
     Line indices:
-    - All line numbers/indices (`replace_lines_start`, `replace_lines_end`, `insert_at_line`) are 0-based (the first line is line 0).
+    - All line numbers/indices (`replace_lines_start`, `replace_lines_end`,
+      `insert_at_line`) are 0-based (the first line is line 0).
     - For line replacement, `replace_lines_start` is inclusive and `replace_lines_end` is exclusive ([start:end]).
-    - For insertion, `insert_at_line` is 0-based (insert before this line; insert at 0 is before the first line).
-    - If `content` is an empty string (""), then the specified replace range will be deleted entirely (no replacement lines inserted).
+    - For insertion, `insert_at_line` is 0-based (insert before this line;
+      insert at 0 is before the first line).
+    - If `content` is an empty string ("") then the specified replace range will be deleted entirely \
+      (no replacement lines inserted).
 
     Protections:
-    - Canonicalizes/resolves file_path. Refuses if writing outside the server's permissions.
+    - Canonicalizes/resolves file_path.
+      Refuses if writing outside the server's permissions.
+
     - Won't overwrite if `overwrite=False` and file exists.
+
     - Refuses to write >10MB at once. Enforces UTF-8 encoding.
     - Won't write to device nodes, symlinks, or system directories.
     - Reports all errors with clear reason.
@@ -116,7 +123,7 @@ def write_file(
                     new_lines = lines_before + content_lines + lines_after
                 with open(abs_fp, "w", encoding="utf-8") as f:
                     f.writelines(new_lines)
-                action = "Deleted" if content_is_empty else f"replaced"
+                action = "Deleted" if content_is_empty else "replaced"
                 return f"Success: Lines {start}:{end} {action} in {abs_fp}"
             except Exception as e:
                 return f"Error: Failed to replace lines: {type(e).__name__}: {e}"
