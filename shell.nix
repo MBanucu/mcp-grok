@@ -15,7 +15,7 @@ pkgs.mkShell {
 
   shellHook = ''
     export UV_PYTHON=$(which python)
-    export PYTHONPATH=$PWD/src
+    export PYTHONPATH=$PWD/src:$PWD/tests
     export PATH="$PWD/bin:$PATH"
     uv sync --all-extras
     echo "uv     python version = $(uv run python --version)"

@@ -1,5 +1,5 @@
 from pathlib import Path
-from test_utils import api_write_file
+from tests.test_utils import api_write_file
 
 
 def test_write_replace_lines(tmp_path, mcp_server):

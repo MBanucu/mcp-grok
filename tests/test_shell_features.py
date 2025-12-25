@@ -1,5 +1,5 @@
 import getpass
-from test_utils import mcp_create_project, mcp_execute_shell, get_last_non_empty_line
+from tests.test_utils import mcp_create_project, mcp_execute_shell, get_last_non_empty_line
 
 
 def test_shell_echo_path(mcp_server):

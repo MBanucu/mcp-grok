@@ -1,4 +1,4 @@
-from test_utils import api_read_file
+from tests.test_utils import api_read_file
 
 
 def test_read_existing_file(tmp_path, mcp_server):

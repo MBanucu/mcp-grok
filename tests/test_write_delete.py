@@ -1,5 +1,5 @@
 from pathlib import Path
-from test_utils import api_write_file
+from tests.test_utils import api_write_file
 
 
 def test_write_delete_lines(tmp_path, mcp_server):

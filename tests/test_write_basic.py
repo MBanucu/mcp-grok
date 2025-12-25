@@ -1,5 +1,5 @@
 from pathlib import Path
-from test_utils import api_write_file, api_read_file
+from tests.test_utils import api_write_file, api_read_file
 
 
 def test_write_whole_file(tmp_path, mcp_server):

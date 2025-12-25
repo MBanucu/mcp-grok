@@ -1,5 +1,5 @@
 import os
-from test_utils import api_write_file, api_read_file
+from tests.test_utils import api_write_file, api_read_file
 
 
 def test_write_relative_path_in_project(mcp_server):

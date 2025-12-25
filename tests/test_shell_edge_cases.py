@@ -1,4 +1,4 @@
-from test_utils import mcp_create_project, mcp_execute_shell
+from tests.test_utils import mcp_create_project, mcp_execute_shell
 
 
 def test_shell_double_pipe_or(mcp_server):

@@ -1,18 +1,35 @@
 import os
+import tempfile
+import subprocess
+import time
+import shutil
 import requests
+
 from test_utils import mcp_create_project, mcp_execute_shell
 
 
+def get_json_headers():
+    return {"Accept": "application/json", "Content-Type": "application/json"}
+
+
+def build_tools_call_payload(name, arguments=None, id=1):
+    p = {
+        "jsonrpc": "2.0",
+        "id": id,
+        "method": "tools/call",
+        "params": {"name": name},
+    }
+    if arguments is not None:
+        p["params"]["arguments"] = arguments
+    return p
+
+
 def test_get_active_project(mcp_server):
+    """Verify that get_active_project returns the correct info after project creation."""
     project_name = "proj_active_test"
     mcp_create_project(mcp_server, project_name)
-    headers = {"Accept": "application/json", "Content-Type": "application/json"}
-    payload = {
-        "jsonrpc": "2.0",
-        "id": 18,
-        "method": "tools/call",
-        "params": {"name": "get_active_project"},
-    }
+    headers = get_json_headers()
+    payload = build_tools_call_payload("get_active_project", id=18)
     resp = requests.post(mcp_server, json=payload, headers=headers)
     assert resp.status_code == 200, f"get_active_project failed: {resp.text}"
     result = resp.json()["result"]
@@ -24,17 +41,14 @@ def test_get_active_project(mcp_server):
 
 
 def test_change_active_project(mcp_server):
+    """Verify that changing the active project works and is reflected everywhere."""
     project_a = "projA"
     project_b = "projB"
     mcp_create_project(mcp_server, project_a)
     mcp_create_project(mcp_server, project_b)
-    headers = {"Accept": "application/json", "Content-Type": "application/json"}
-    change_payload = {
-        "jsonrpc": "2.0",
-        "id": 30,
-        "method": "tools/call",
-        "params": {"name": "change_active_project", "arguments": {"project_name": project_a}},
-    }
+    headers = get_json_headers()
+    change_payload = build_tools_call_payload(
+        "change_active_project", arguments={"project_name": project_a}, id=30)
     resp = requests.post(mcp_server, json=change_payload, headers=headers)
     assert resp.status_code == 200, f"Change active project failed: {resp.text}"
     try:
@@ -45,12 +59,8 @@ def test_change_active_project(mcp_server):
         assert project_a in result, f"Expected '{project_a}' in result. resp.text={resp.text}"
     except KeyError as e:
         raise AssertionError(f"KeyError {e} when accessing response JSON. Full response: {resp.text}") from e
-    get_payload = {
-        "jsonrpc": "2.0",
-        "id": 31,
-        "method": "tools/call",
-        "params": {"name": "get_active_project"},
-    }
+    # Validate active project actually changed
+    get_payload = build_tools_call_payload("get_active_project", id=31)
     get_resp = requests.post(mcp_server, json=get_payload, headers=headers)
     assert get_resp.status_code == 200
     result = get_resp.json()["result"]
@@ -60,16 +70,13 @@ def test_change_active_project(mcp_server):
     DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test")
     echo_output = mcp_execute_shell(mcp_server, "echo $PWD")
     assert echo_output.endswith(f"{DEV_ROOT}/{project_a}"), f"Shell $PWD: got {echo_output!r}"
+    # Create more projects, validate existence
     names = ["projA", "projB", "projC"]
     for n in names:
         mcp_create_project(mcp_server, n)
         assert os.path.isdir(os.path.join(DEV_ROOT, n)), f"Project dir not created for {n}"
-    list_payload = {
-        "jsonrpc": "2.0",
-        "id": 17,
-        "method": "tools/call",
-        "params": {"name": "list_all_projects"},
-    }
+    # List projects, validate all expected exist
+    list_payload = build_tools_call_payload("list_all_projects", id=17)
     resp = requests.post(mcp_server, json=list_payload, headers=headers)
     assert resp.status_code == 200, f"List projects failed: {resp.text}"
     result = resp.json()["result"]
@@ -79,13 +86,8 @@ def test_change_active_project(mcp_server):
         project_names = result
     assert set(names).issubset(set(project_names)), f"Projects missing: {names} not in {project_names}"
 
+
 # ---- moved from test_server_default_project.py ----
-
-import tempfile
-import subprocess
-import time
-import shutil
-
 
 def start_server(projects_dir, port, default_project):
     """Start the server process with the given parameters."""
