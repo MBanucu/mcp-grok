@@ -24,14 +24,19 @@ def api_write_file(server_url, file_path, content, **extra_args):
     return str(result)
 
 
-def api_read_file(server_url, file_path):
+def api_read_file(server_url, file_path, limit=None, offset=None):
+    args = {"file_path": file_path}
+    if limit is not None:
+        args["limit"] = limit
+    if offset is not None:
+        args["offset"] = offset
     payload = {
         "jsonrpc": "2.0",
         "id": 8809,
         "method": "tools/call",
         "params": {
             "name": "read_file",
-            "arguments": {"file_path": file_path},
+            "arguments": args,
         },
     }
     headers = {"Accept": "application/json"}
