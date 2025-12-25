@@ -1,11 +1,11 @@
 import logging
-from src.config import Config
-from src.shell_manager import ShellManager
+from .config import Config
+from .shell_manager import ShellManager
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 from mcp.types import ToolAnnotations
 from typing import Optional
-from src.file_tools import read_file as file_tools_read_file, write_file as file_tools_write_file
+from .file_tools import read_file as file_tools_read_file, write_file as file_tools_write_file
 
 config = Config()
 
@@ -232,7 +232,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--port', type=int, default=8000,
+        '--port', type=int, default=config.port,
         help='Port to run MCP server on'
     )
     parser.add_argument(

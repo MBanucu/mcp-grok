@@ -27,7 +27,7 @@ class ServerManager:
 
         log = open(MCP_LOGFILE, "a")
         proc = subprocess.Popen(
-            ['python', '-m', 'src.server', '--port', str(port)],
+            ['python', '-m', 'server', '--port', str(port)],
             stdout=log,
             stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL,
