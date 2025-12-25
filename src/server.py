@@ -194,8 +194,16 @@ def write_file(
     - Will not write to device nodes, symlinks, or system directories.
     - All failures and rejections are reported with clear error reasons for troubleshooting.
     """
+    import os
+    # If file_path is relative, resolve relative to shell_manager.cwd
+    if not os.path.isabs(file_path):
+        if not shell_manager.cwd:
+            return "Error: No active shell/project for relative path write."
+        abs_path = os.path.join(shell_manager.cwd, file_path)
+    else:
+        abs_path = file_path
     return file_tools_write_file(
-        file_path,
+        abs_path,
         content,
         overwrite,
         replace_lines_start,
