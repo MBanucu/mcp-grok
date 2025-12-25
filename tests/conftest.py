@@ -2,7 +2,7 @@ import os
 import pytest
 
 PORT = 8109
-DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test-write")
+DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test")
 
 
 @pytest.fixture(scope="module")

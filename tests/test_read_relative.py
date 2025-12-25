@@ -5,7 +5,7 @@ def test_read_relative_path_in_project(mcp_server):
     rel_dir = "readdir_dir"
     rel_file = "readdata.txt"
     rel_path = os.path.join(rel_dir, rel_file)
-    DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test-write")
+    DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test")
     server_url = mcp_server
     active_project_dir = os.path.join(DEV_ROOT, "default")
     abs_dir = os.path.join(active_project_dir, rel_dir)

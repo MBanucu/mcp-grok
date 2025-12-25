@@ -7,7 +7,7 @@ def test_write_relative_path_in_project(mcp_server):
     rel_file = "relfile.txt"
     rel_path = os.path.join(rel_dir, rel_file)
     server_url = mcp_server
-    DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test-write")
+    DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test")
     active_project_dir = os.path.join(DEV_ROOT, "default")
     abs_dir = os.path.join(active_project_dir, rel_dir)
     abs_file = os.path.join(abs_dir, rel_file)
