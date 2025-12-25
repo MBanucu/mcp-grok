@@ -85,7 +85,7 @@ This project uses both a linter and a static type checker, just like in CI. You 
 [flake8](https://flake8.pycqa.org/) checks your code for common style, bug, and complexity issues.
 
 ```sh
-nix-shell --argstr dontrunmenu "1" --run "uv run flake8 *.py src tests --count --select=E9,F63,F7,F82 --show-source --statistics && uv run flake8 *.py src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics"
+nix-shell --argstr dontrunmenu "1" --run "uv run flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics && uv run flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics"
 ```
 
 - The first run enforces strict errors; the second provides statistics with relaxed rules (like line length and complexity), matching CI.

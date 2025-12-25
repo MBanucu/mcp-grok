@@ -1,9 +1,8 @@
 import os
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import time
 import pytest
-import menu_core
+from menu import menu_core
+
 
 @pytest.fixture(autouse=True)
 def mcp_log_cleanup():
@@ -14,6 +13,7 @@ def mcp_log_cleanup():
     yield
     menu_core.clear_log(menu_core.MCP_LOGFILE)
 
+
 @pytest.fixture(autouse=True)
 def proxy_log_cleanup():
     """
@@ -22,6 +22,7 @@ def proxy_log_cleanup():
     menu_core.clear_log(menu_core.PROXY_LOGFILE)
     yield
     menu_core.clear_log(menu_core.PROXY_LOGFILE)
+
 
 @pytest.fixture
 def start_stop_server():
@@ -35,6 +36,7 @@ def start_stop_server():
     if proc is not None:
         menu_core.server_manager.stop_server()
 
+
 @pytest.fixture
 def start_stop_proxy():
     """
@@ -44,6 +46,7 @@ def start_stop_proxy():
     proc = menu_core.start_proxy()
     yield proc
     menu_core.stop_proxy(proc)
+
 
 def wait_for_log(log_file, timeout=10.0, poll_interval=0.2):
     """Wait up to timeout seconds for the log to become nonempty."""
@@ -55,6 +58,7 @@ def wait_for_log(log_file, timeout=10.0, poll_interval=0.2):
                     return
         time.sleep(poll_interval)
     raise AssertionError(f"Log file {log_file} did not become nonempty within {timeout} seconds.")
+
 
 def test_server_log(start_stop_server):
     proc = start_stop_server
