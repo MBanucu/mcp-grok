@@ -24,32 +24,6 @@ def handle_log_action(log_path: str, action: str, title: str) -> None:
         ).run()
 
 
-def show_log(
-    log_path: str, title: str, clear: bool = False
-) -> None:
-    """
-    Show or clear a log file using a dialog.
-
-    Args:
-        log_path (str): The path to the log file.
-        title (str): Dialog title.
-        clear (bool): If True, clear the log rather than view it.
-    """
-    if clear:
-        menu_core.clear_log(log_path)
-        message_dialog(
-            title="Log Cleared",
-            text=f"{title} has been cleared."
-        ).run()
-    else:
-        content = menu_core.log_content(log_path)
-        if content:
-            content = ANSI_ESCAPE.sub('', content[-1000:])
-        else:
-            content = "[Log is empty or does not exist]"
-        message_dialog(title=title, text=content).run()
-
-
 if __name__ == '__main__':
     state = None
     try:
