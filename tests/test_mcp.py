@@ -27,7 +27,7 @@ def mcp_server():
         shutil.rmtree(DEV_ROOT)
     os.makedirs(DEV_ROOT, exist_ok=True)
     server_proc = subprocess.Popen([
-        "python", "-m", "src.server", "--port", str(PORT), "--projects-dir", DEV_ROOT
+        "uv", "run", "python", "-m", "server", "--port", str(PORT), "--projects-dir", DEV_ROOT
     ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     try:
         _wait_for_server_ready(server_proc)
