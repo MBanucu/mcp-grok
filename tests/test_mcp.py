@@ -22,47 +22,36 @@ DEV_ROOT = os.path.join(USER_HOME, "dev", "mcp-projects-test")
 
 @pytest.fixture(scope="module")
 def mcp_server():
-    """Start MCP server and clean up dev root on teardown."""
+    import subprocess, time
     if os.path.exists(DEV_ROOT):
         shutil.rmtree(DEV_ROOT)
     os.makedirs(DEV_ROOT, exist_ok=True)
     server_proc = subprocess.Popen([
         "uv", "run", "python", "-m", "server", "--port", str(PORT), "--projects-dir", DEV_ROOT
     ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    start_time = time.time()
+    while True:
+        if server_proc.poll() is not None:
+            raise RuntimeError("Server process exited prematurely")
+        if server_proc.stdout is not None:
+            line = server_proc.stdout.readline()
+            if "Uvicorn running on http://" in line:
+                break
+        else:
+            import time as _t; _t.sleep(0.1)
+        if time.time() - start_time > 30:
+            raise TimeoutError("Timed out waiting for server readiness")
+    yield f"http://localhost:{PORT}/mcp"
+    server_proc.terminate()
     try:
-        _wait_for_server_ready(server_proc)
-        yield f"http://localhost:{PORT}/mcp"
-    finally:
-        server_proc.terminate()
-        try:
-            server_proc.wait(timeout=5)
-        except Exception:
-            server_proc.kill()
-        if os.path.exists(DEV_ROOT):
-            shutil.rmtree(DEV_ROOT)
+        server_proc.wait(timeout=5)
+    except Exception:
+        server_proc.kill()
+    if os.path.exists(DEV_ROOT):
+        shutil.rmtree(DEV_ROOT)
 
 
 # --- Internal Helpers ---
-
-def _wait_for_server_ready(server_proc, timeout=30):
-    start_time = time.time()
-    if server_proc.stdout is None:
-        server_proc.terminate()
-        raise RuntimeError("Failed to capture server stdout")
-    while True:
-        if time.time() - start_time > timeout:
-            server_proc.terminate()
-            raise TimeoutError("Timed out waiting for server to start")
-        rlist, _, _ = select.select([server_proc.stdout], [], [], 0.1)
-        if rlist:
-            line = server_proc.stdout.readline()
-            if not line:
-                if server_proc.poll() is not None:
-                    raise RuntimeError("Server process exited prematurely")
-                continue
-            if "Uvicorn running on http://" in line or "Uvicorn running on http://127.0.0.1" in line:
-                return
-
 
 def mcp_create_project(server_url, project_name):
     """Create project via MCP API."""
