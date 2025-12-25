@@ -157,7 +157,15 @@ def read_file(file_path: str, limit: int = 2000, offset: int = 0) -> str:
     - If the file exceeds 10MB, or appears as binary (null bytes), a clear error message is returned instead.
       Partial reads are truncated with a notice.
     """
-    return file_tools_read_file(file_path, limit, offset)
+    import os
+    # If file_path is relative, resolve relative to shell_manager.cwd
+    if not os.path.isabs(file_path):
+        if not shell_manager.cwd:
+            return "Error: No active shell/project for relative path read."
+        abs_path = os.path.join(shell_manager.cwd, file_path)
+    else:
+        abs_path = file_path
+    return file_tools_read_file(abs_path, limit, offset)
 
 
 @mcp.tool(
