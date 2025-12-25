@@ -1,10 +1,10 @@
 import os
 import requests
 import pytest
-from pathlib import Path
 
 PORT = 8111
 DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test-read")
+
 
 @pytest.fixture(scope="module")
 def mcp_server():
@@ -39,6 +39,7 @@ def mcp_server():
     if os.path.exists(DEV_ROOT):
         shutil.rmtree(DEV_ROOT)
 
+
 def api_read_file(server_url, file_path):
     payload = {
         "jsonrpc": "2.0",
@@ -63,6 +64,7 @@ def api_read_file(server_url, file_path):
                 str(item.get("text", str(item))) for item in result["content"] if isinstance(item, dict)
             )
     return str(result)
+
 
 def test_read_relative_path_in_project(mcp_server):
     """

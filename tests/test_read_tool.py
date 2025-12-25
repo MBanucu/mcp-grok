@@ -136,6 +136,7 @@ def test_negative_offset_limit(tmp_path, mcp_server):
     result3 = api_read_file(mcp_server, str(tf), offset=500)
     assert result3.strip() == ""
 
+
 def test_read_init_py_file(tmp_path, mcp_server):
     # Create a __init__.py file (matching real Python usage)
     init_file = tmp_path / "__init__.py"

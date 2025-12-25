@@ -179,6 +179,8 @@ def test_change_active_project(mcp_server):
     }
     resp = requests.post(mcp_server, json=change_payload, headers=headers)
     assert resp.status_code == 200, f"Change active project failed: {resp.text}"
+    assert resp.json()["result"]["structuredContent"]["result"].startswith(f"Started shell for project: ")
+    assert project_a in resp.json()["result"]["structuredContent"]["result"]
     get_payload = {
         "jsonrpc": "2.0",
         "id": 31,

@@ -1,10 +1,10 @@
 import os
 import requests
 import pytest
-from pathlib import Path
 
 PORT = 8109
 DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test-write")
+
 
 @pytest.fixture(scope="module")
 def mcp_server():
@@ -39,6 +39,7 @@ def mcp_server():
     if os.path.exists(DEV_ROOT):
         shutil.rmtree(DEV_ROOT)
 
+
 def api_write_file(server_url, file_path, content, **extra_args):
     args = {"file_path": file_path, "content": content}
     args.update(extra_args)
@@ -60,6 +61,7 @@ def api_write_file(server_url, file_path, content, **extra_args):
     if isinstance(result, dict):
         return result.get("structuredContent", {}).get("result") or result.get("content") or str(result)
     return str(result)
+
 
 def test_write_replaceall_nonexistent_file(tmp_path, mcp_server):
     test_file = tmp_path / "replaceAll-new.txt"
