@@ -1,5 +1,4 @@
 import os
-import tempfile
 import requests
 import pytest
 from pathlib import Path
@@ -7,9 +6,12 @@ from pathlib import Path
 PORT = 8109
 DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test-write")
 
+
 @pytest.fixture(scope="module")
 def mcp_server():
-    import subprocess, shutil, time
+    import subprocess
+    import shutil
+    import time
     if os.path.exists(DEV_ROOT):
         shutil.rmtree(DEV_ROOT)
     os.makedirs(DEV_ROOT, exist_ok=True)
@@ -25,7 +27,8 @@ def mcp_server():
             if "Uvicorn running on http://" in line:
                 break
         else:
-            import time as _t; _t.sleep(0.1)
+            import time as _t
+            _t.sleep(0.1)
         if time.time() - start_time > 30:
             raise TimeoutError("Timed out waiting for server readiness")
     yield f"http://localhost:{PORT}/mcp"
@@ -36,6 +39,7 @@ def mcp_server():
         server_proc.kill()
     if os.path.exists(DEV_ROOT):
         shutil.rmtree(DEV_ROOT)
+
 
 def api_write_file(server_url, file_path, content, **extra_args):
     args = {"file_path": file_path, "content": content}
@@ -58,6 +62,7 @@ def api_write_file(server_url, file_path, content, **extra_args):
     if isinstance(result, dict):
         return result.get("structuredContent", {}).get("result") or result.get("content") or str(result)
     return str(result)
+
 
 def api_read_file(server_url, file_path):
     payload = {
@@ -85,6 +90,7 @@ def api_read_file(server_url, file_path):
     return str(result)
 
 # --- Main tests: overwrite, replace, insert, edge, delete ---
+
 def test_write_whole_file(tmp_path, mcp_server):
     test_file = tmp_path / "write_all.txt"
     server_url = mcp_server
@@ -92,6 +98,7 @@ def test_write_whole_file(tmp_path, mcp_server):
     assert "Success" in out
     result = api_read_file(server_url, str(test_file))
     assert result.strip() == "hello\nworld"
+
 
 def test_write_replace_lines(tmp_path, mcp_server):
     test_file = tmp_path / "replace.txt"

@@ -1,5 +1,4 @@
 import os
-import tempfile
 import requests
 import pytest
 
@@ -8,9 +7,12 @@ RPC_ID_READ_FILE = 2001
 USER_HOME = os.path.expanduser("~")
 DEV_ROOT = os.path.join(USER_HOME, "dev", "mcp-projects-test")
 
+
 @pytest.fixture(scope="module")
 def mcp_server():
-    import subprocess, shutil, time
+    import subprocess
+    import shutil
+    import time
     # Clean up dev root
     if os.path.exists(DEV_ROOT):
         shutil.rmtree(DEV_ROOT)
@@ -28,7 +30,8 @@ def mcp_server():
             if "Uvicorn running on http://" in line:
                 break
         else:
-            import time as _t; _t.sleep(0.1)
+            import time as _t
+            _t.sleep(0.1)
         if time.time() - start_time > 30:
             raise TimeoutError("Timed out waiting for server readiness")
     yield f"http://localhost:{PORT}/mcp"
@@ -74,6 +77,7 @@ def api_read_file(server_url, file_path, limit=None, offset=None):
             return joined
     return str(result)
 
+
 def test_read_existing_file(tmp_path, mcp_server):
     # Create a test text file
     d = tmp_path
@@ -92,9 +96,11 @@ def test_read_existing_file(tmp_path, mcp_server):
     assert "Line 10" in result3 and "Line 11" in result3
     assert "Line 9" not in result3
 
+
 def test_read_nonexistent_file(mcp_server):
     result = api_read_file(mcp_server, "/tmp/this_file_does_not_exist_abcdefg.txt")
     assert "does not exist" in result
+
 
 def test_read_binary_file(tmp_path, mcp_server):
     # Create a binary file
@@ -103,6 +109,7 @@ def test_read_binary_file(tmp_path, mcp_server):
     result = api_read_file(mcp_server, str(bf))
     assert "binary" in result or "Error" in result
 
+
 def test_read_large_file(tmp_path, mcp_server):
     # Create a large file (over 10MB)
     lf = tmp_path / "hugefile.txt"
@@ -110,9 +117,11 @@ def test_read_large_file(tmp_path, mcp_server):
     result = api_read_file(mcp_server, str(lf))
     assert "too large" in result
 
+
 def test_read_directory(tmp_path, mcp_server):
     result = api_read_file(mcp_server, str(tmp_path))
     assert "not a file" in result or "does not exist" in result or "Error" in result
+
 
 def test_negative_offset_limit(tmp_path, mcp_server):
     tf = tmp_path / "weird.txt"

@@ -4,9 +4,8 @@ from src.shell_manager import ShellManager
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 from mcp.types import ToolAnnotations
-import os
-import pathlib
 from typing import Optional
+from src.file_tools import read_file as file_tools_read_file, write_file as file_tools_write_file
 
 config = Config()
 
@@ -24,17 +23,22 @@ logger = logging.getLogger(__name__)
 shell_manager = ShellManager(config)
 
 # --- PROJECT MANAGEMENT HELPERS ---
+
+
 def safe_project_name(name: str) -> bool:
     import re
     return re.match(r'^[a-zA-Z0-9_.-]+$', name) is not None
+
 
 def project_path(name: str) -> str:
     import os
     return os.path.join(config.projects_dir, name)
 
+
 def ensure_projects_dir():
     import os
     os.makedirs(config.projects_dir, exist_ok=True)
+
 
 # --- MCP SERVER SETUP ---
 mcp = FastMCP(
@@ -47,9 +51,11 @@ mcp = FastMCP(
     json_response=True,
 )
 
+
 class ActiveProjectInfo(BaseModel):
     name: str
     path: str
+
 
 @mcp.tool(
     title="Execute Any Shell Command",
@@ -67,6 +73,7 @@ def execute_shell(command: str = "") -> str:
         return "Error: Command cannot be empty."
     return shell_manager.execute(command)
 
+
 @mcp.tool(title="Get Active Project")
 def get_active_project() -> ActiveProjectInfo:
     """
@@ -77,6 +84,7 @@ def get_active_project() -> ActiveProjectInfo:
     name = os.path.basename(cwd) if cwd and os.path.isdir(cwd) else ""
     path = cwd if cwd and os.path.isdir(cwd) else ""
     return ActiveProjectInfo(name=name, path=path)
+
 
 @mcp.tool(title="List All Projects")
 def list_all_projects() -> list:
@@ -89,6 +97,7 @@ def list_all_projects() -> list:
         name for name in os.listdir(config.projects_dir)
         if os.path.isdir(os.path.join(config.projects_dir, name))
     ])
+
 
 @mcp.tool(title="Create New Project")
 def create_new_project(project_name: str) -> str:
@@ -108,6 +117,7 @@ def create_new_project(project_name: str) -> str:
         os.makedirs(proj_path, exist_ok=True)
     shell_manager.stop_shell()
     return shell_manager.start_shell(proj_path)
+
 
 @mcp.tool(title="Change Active Project")
 def change_active_project(project_name: str) -> str:
@@ -130,11 +140,6 @@ def change_active_project(project_name: str) -> str:
     shell_manager.stop_shell()
     return shell_manager.start_shell(proj_path)
 
-# --- FILE TOOLS ---
-from file_tools import read_file as file_tools_read_file, write_file as file_tools_write_file
-
-# --- FILE TOOLS ---
-from file_tools import read_file as file_tools_read_file, write_file as file_tools_write_file
 
 @mcp.tool(
     title="Read File Anywhere",
@@ -144,13 +149,16 @@ def read_file(file_path: str, limit: int = 2000, offset: int = 0) -> str:
     """
     Read and return up to `limit` lines from the given `file_path`, starting at line `offset`.
 
-    - Returns file content as text, or a clear error string if the file is not found, is too large, is a directory, or appears binary.
+    - Returns file content as text, or a clear error string
+      if the file is not found, is too large, is a directory, or appears binary.
     - Files anywhere on the server’s filesystem can be accessed, subject to process file permissions.
     - `limit` (maximum lines): defaults to 2000, capped at 5000. Offset must be >= 0.
     - Reading directories is blocked. Large/binary file detection is enforced for safety.
-    - If the file exceeds 10MB, or appears as binary (null bytes), a clear error message is returned instead. Partial reads are truncated with a notice.
+    - If the file exceeds 10MB, or appears as binary (null bytes), a clear error message is returned instead.
+      Partial reads are truncated with a notice.
     """
     return file_tools_read_file(file_path, limit, offset)
+
 
 @mcp.tool(
     title="Write File Anywhere",
@@ -188,7 +196,6 @@ def write_file(
         replace_lines_end,
         insert_at_line,
     )
-
 
 
 # --- ENTRY POINT ---
@@ -230,6 +237,7 @@ def main():
         logger.info(f"Default project activation result: {result}")
     mcp.settings.port = config.port
     mcp.run(transport="streamable-http")
+
 
 if __name__ == "__main__":
     main()

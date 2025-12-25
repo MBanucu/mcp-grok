@@ -1,8 +1,5 @@
 import os
 import shutil
-import subprocess
-import time
-import select
 import requests
 import pytest
 import getpass
@@ -22,7 +19,8 @@ DEV_ROOT = os.path.join(USER_HOME, "dev", "mcp-projects-test")
 
 @pytest.fixture(scope="module")
 def mcp_server():
-    import subprocess, time
+    import subprocess
+    import time
     if os.path.exists(DEV_ROOT):
         shutil.rmtree(DEV_ROOT)
     os.makedirs(DEV_ROOT, exist_ok=True)
@@ -38,7 +36,8 @@ def mcp_server():
             if "Uvicorn running on http://" in line:
                 break
         else:
-            import time as _t; _t.sleep(0.1)
+            import time as _t
+            _t.sleep(0.1)
         if time.time() - start_time > 30:
             raise TimeoutError("Timed out waiting for server readiness")
     yield f"http://localhost:{PORT}/mcp"

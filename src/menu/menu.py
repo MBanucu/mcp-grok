@@ -1,6 +1,4 @@
 import re
-from prompt_toolkit.shortcuts import message_dialog
-from . import menu_core
 from .menu_state import MenuState
 from .menu_app import MenuApp
 
