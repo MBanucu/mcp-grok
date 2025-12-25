@@ -2,6 +2,7 @@ import os
 import requests
 from test_utils import mcp_create_project, mcp_execute_shell
 
+
 def test_get_active_project(mcp_server):
     project_name = "proj_active_test"
     mcp_create_project(mcp_server, project_name)
@@ -20,6 +21,7 @@ def test_get_active_project(mcp_server):
     path = struct.get("path") if struct else result.get("path")
     assert name == project_name, f"Active project mismatch: expected {project_name}, got {name!r}"
     assert path and path.endswith(project_name), f"Path mismatch: {path!r}"
+
 
 def test_change_active_project(mcp_server):
     project_a = "projA"

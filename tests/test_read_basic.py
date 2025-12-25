@@ -1,5 +1,5 @@
-from pathlib import Path
 from test_utils import api_read_file
+
 
 def test_read_existing_file(tmp_path, mcp_server):
     test_file = tmp_path / "sample.txt"

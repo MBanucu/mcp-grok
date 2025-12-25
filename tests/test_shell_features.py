@@ -1,6 +1,7 @@
 import getpass
 from test_utils import mcp_create_project, mcp_execute_shell, get_last_non_empty_line
 
+
 def test_shell_echo_path(mcp_server):
     project_name = "pytest_echo_path"
     mcp_create_project(mcp_server, project_name)
@@ -9,6 +10,7 @@ def test_shell_echo_path(mcp_server):
     assert last_line, f"$PATH empty: {last_line!r}"
     assert ':' in last_line, f"$PATH missing ':': {last_line!r}"
 
+
 def test_shell_echo_user(mcp_server):
     project_name = "pytest_echo_user"
     mcp_create_project(mcp_server, project_name)
@@ -16,6 +18,7 @@ def test_shell_echo_user(mcp_server):
     last_line = get_last_non_empty_line(shell_output)
     expected_user = getpass.getuser()
     assert last_line == expected_user, f"User mismatch: expected {expected_user}, got {last_line!r}"
+
 
 def test_shell_detect_nix_shell(mcp_server):
     project_name = "pytest_nixshell"

@@ -1,5 +1,5 @@
-from pathlib import Path
 from test_utils import api_read_file
+
 
 def test_negative_offset_limit(tmp_path, mcp_server):
     tf = tmp_path / "weird.txt"

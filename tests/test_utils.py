@@ -3,6 +3,7 @@ import requests
 
 # Existing API functions
 
+
 def api_write_file(server_url, file_path, content, **extra_args):
     args = {"file_path": file_path, "content": content}
     args.update(extra_args)
@@ -24,6 +25,7 @@ def api_write_file(server_url, file_path, content, **extra_args):
     if isinstance(result, dict):
         return result.get("structuredContent", {}).get("result") or result.get("content") or str(result)
     return str(result)
+
 
 def api_read_file(server_url, file_path, limit=None, offset=None):
     args = {"file_path": file_path}
@@ -57,6 +59,7 @@ def api_read_file(server_url, file_path, limit=None, offset=None):
 
 # MCP helpers for splitting tests
 
+
 def mcp_create_project(server_url, project_name):
     """Create project via MCP API."""
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -77,6 +80,7 @@ def mcp_create_project(server_url, project_name):
     assert os.path.isdir(os.path.join(test_dir, project_name)), f"Project dir not created: {test_dir}/{project_name}"
     return os.path.join(test_dir, project_name)
 
+
 def mcp_execute_shell(server_url, command):
     """Run shell command via MCP API."""
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -94,6 +98,7 @@ def mcp_execute_shell(server_url, command):
     data = resp.json()
     return _extract_shell_output(data["result"])
 
+
 def _extract_shell_output(result):
     content = result.get("content", result) if isinstance(result, dict) else result
     if isinstance(content, list):
@@ -101,6 +106,7 @@ def _extract_shell_output(result):
             item.get("text", str(item)) for item in content if isinstance(item, dict)
         ).strip()
     return str(content).strip()
+
 
 def get_last_non_empty_line(output):
     lines = [line for line in output.splitlines() if line.strip()]

@@ -1,5 +1,6 @@
 from test_utils import mcp_create_project, mcp_execute_shell
 
+
 def test_shell_double_pipe_or(mcp_server):
     project_name = "pytest_shell_double_pipe_or"
     mcp_create_project(mcp_server, project_name)
@@ -11,6 +12,7 @@ def test_shell_double_pipe_or(mcp_server):
     out2 = mcp_execute_shell(mcp_server, 'false || echo fallback')
     assert any("fallback" in line for line in out2.splitlines()), f"Expected 'fallback', got: {out2!r}"
     assert not any("foo" in line for line in out2.splitlines()), f"Unexpected 'foo': {out2!r}"
+
 
 def test_shell_ls_or_echo(mcp_server):
     project_name = "pytest_shell_ls_or_echo"
