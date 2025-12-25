@@ -137,8 +137,14 @@ def change_active_project(project_name: str) -> str:
     import os
     if not os.path.isdir(proj_path):
         return f"Error: Project directory does not exist: {proj_path}"
-    shell_manager.stop_shell()
-    return shell_manager.start_shell(proj_path)
+    try:
+        shell_manager.stop_shell()
+    except Exception as e:
+        return f"Error: failed to stop previous shell: {e}"
+    try:
+        return shell_manager.start_shell(proj_path)
+    except Exception as e:
+        return f"Error: failed to start shell in '{proj_path}': {e}"
 
 
 @mcp.tool(
