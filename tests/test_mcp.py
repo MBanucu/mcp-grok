@@ -179,8 +179,12 @@ def test_change_active_project(mcp_server):
     }
     resp = requests.post(mcp_server, json=change_payload, headers=headers)
     assert resp.status_code == 200, f"Change active project failed: {resp.text}"
-    assert resp.json()["result"]["structuredContent"]["result"].startswith(f"Started shell for project: ")
-    assert project_a in resp.json()["result"]["structuredContent"]["result"]
+    try:
+        result = resp.json()["result"]["structuredContent"]["result"]
+        assert result.startswith(f"Started shell for project: "), f"Response did not start with expected text. resp.text={resp.text}"
+        assert project_a in result, f"Expected '{project_a}' in result. resp.text={resp.text}"
+    except KeyError as e:
+        raise AssertionError(f"KeyError {e} when accessing response JSON. Full response: {resp.text}") from e
     get_payload = {
         "jsonrpc": "2.0",
         "id": 31,
