@@ -1,2 +1,7 @@
 #!/bin/sh
-exec npx @srbhptl39/mcp-superassistant-proxy@latest --config "./config.json" --outputTransport sse "$@"
+# Determine the directory where this script resides using realpath for robustness
+SCRIPT_PATH="$(realpath "$0")"
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+CONFIG_PATH="$SCRIPT_DIR/config.json"
+
+exec npx @srbhptl39/mcp-superassistant-proxy@latest --config "$CONFIG_PATH" --outputTransport sse "$@"

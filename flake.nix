@@ -24,7 +24,7 @@
           mkdir -p $out/bin
           cp ./bin/superassistant-proxy $out/bin/superassistant-proxy
           chmod +x $out/bin/superassistant-proxy
-          cp ./config.json $out/bin/config.json
+          cp ./bin/config.json $out/bin/config.json
           runHook postInstall
         '';
         meta = with pkgs.lib; {
