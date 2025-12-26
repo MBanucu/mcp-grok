@@ -28,13 +28,13 @@ $ nix develop .#
 # start the MCP Server and the SuperAssistant Proxy
 
 # Start the MCP-Grok server manually
-$ nix develop .# --command python -m mcp_grok.mcp_grok_server
+$ nix develop .#menuSuppressed --command python -m mcp_grok.mcp_grok_server
 
 # Or with options using mcp-grok-server:
-$ nix develop .# --command python -m mcp_grok.mcp_grok_server --port 8099 --projects-dir ~/dev/my-projects --default-project testproject
+$ nix develop .#menuSuppressed --command python -m mcp_grok.mcp_grok_server --port 8099 --projects-dir ~/dev/my-projects --default-project testproject
 
 # Start the SuperAssistant Proxy manually
-$ nix develop .# --command superassistant-proxy
+$ nix develop .#menuSuppressed --command superassistant-proxy
 ```
 
 > **Advanced:**
@@ -101,7 +101,7 @@ This project uses both a linter and a static type checker, just like in CI. You 
 [flake8](https://flake8.pycqa.org/) checks your code for common style, bug, and complexity issues.
 
 ```sh
-nix develop .# --command sh -c 'flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics && flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics'
+nix develop .#menuSuppressed --command sh -c 'flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics && flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics'
 ```
 
 - The first run enforces strict errors; the second provides statistics with relaxed rules (like line length and complexity), matching CI.
@@ -111,7 +111,7 @@ nix develop .# --command sh -c 'flake8 src tests --count --select=E9,F63,F7,F82 
 [pyright](https://github.com/microsoft/pyright) performs static type checking for Python.
 
 ```sh
-nix develop .# --command pyright .
+nix develop .#menuSuppressed --command pyright .
 ```
 
 - This checks for type errors across the project, as in CI.
@@ -119,7 +119,7 @@ nix develop .# --command pyright .
 ## Running Tests
 
 ```sh
-nix develop .# --command python -m pytest tests
+nix develop .#menuSuppressed --command python -m pytest tests
 ```
 
 Tests launch the server in a subprocess, simulate real tool API requests, and clean up after themselves. All main features are covered, including project management, shell execution, API error handling, and session management.
