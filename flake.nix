@@ -45,14 +45,12 @@
           pkgs.git
         ];
         inputsFrom = [ self.packages.${system}.default ];
-        shellHook = ''
+shellHook = ''
           export PYTHONPATH="$PWD/src:$PWD/tests:$PYTHONPATH"
           export PATH="$PWD/bin:$PATH"
           echo "[devShell] PYTHONPATH set to $PYTHONPATH"
-          if [ -t 1 ] && [ "${dontrunmenu:-}" != "1" ]; then
-            python -m menu.menu
-            exit $?
-          fi
+          python -m menu.menu
+          exit $?
         '';
       };
 
@@ -69,14 +67,11 @@
         shellHook = ''
           export PYTHONPATH="$PWD/src:$PWD/tests:$PYTHONPATH"
           export PATH="$PWD/bin:$PATH"
-          export dontrunmenu=1
-          echo "[devShell(menuSuppressed)] PYTHONPATH set to $PYTHONPATH (menu auto-suppressed)"
-          if [ -t 1 ] && [ "${dontrunmenu:-}" != "1" ]; then
-            python -m menu.menu
-            exit $?
-          fi
+          echo "[devShell(menuSuppressed)] PYTHONPATH set to $PYTHONPATH (menu suppressed)"
         '';
       };
+
+
 
     };
 }
