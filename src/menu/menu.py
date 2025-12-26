@@ -83,7 +83,7 @@ def main():
         print("\nNo interactive terminal detected and no command-line option given.")
         parser.print_usage()
         print("\nFor documentation or non-interactive usage, see the README or run with --help.")
-        sys.exit(0)
+        sys.exit(1)
 
     # TTY + no args: run TUI
     try:
