@@ -20,12 +20,14 @@ jobs:
       uses: cachix/install-nix-action@v27
       with:
         nix_path: nixpkgs=channel:nixos-25.11
+        extra_nix_config: |
+          experimental-features = nix-command flakes
 
     - name: Lint with flake8
-      run: nix-shell --argstr dontrunmenu "1" --argstr pythonVersion "${{ matrix.python-version }}" --run "python -m flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics && python -m flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics"
+      run: nix develop .# --command python -m flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics && python -m flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
     - name: Type check with pyright
-      run: nix-shell --argstr dontrunmenu "1" --argstr pythonVersion "${{ matrix.python-version }}" --run "pyright ."
+      run: nix develop .# --command pyright .
 
     - name: Test with pytest
-      run: nix-shell --argstr dontrunmenu "1" --argstr pythonVersion "${{ matrix.python-version }}" --run "python -m pytest tests"
+      run: nix develop .# --command python -m pytest tests
