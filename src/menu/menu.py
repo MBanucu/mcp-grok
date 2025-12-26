@@ -10,7 +10,7 @@ ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="menu",
+        prog="mcp-grok-menu",
         description="Interactive terminal (TUI) menu for MCP project management."
     )
     group = parser.add_mutually_exclusive_group()
