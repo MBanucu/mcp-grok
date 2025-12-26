@@ -1,27 +1,25 @@
-{ pkgs ? import <nixpkgs> {}
-, pythonVersion ? "312"
-, dontrunmenu ? ""
-}:
+{ pkgs ? import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-25.11.tar.gz") {}, pythonVersion ? "312", dontrunmenu ? "" }:
 
 let
   python = builtins.getAttr ("python" + pythonVersion) pkgs;
 in
 pkgs.mkShell {
-  packages = with pkgs; [
+  buildInputs = [
     python
-    uv
-    nodejs_latest
+    pkgs.python312Packages.requests
+    pkgs.python312Packages.pytest
+    pkgs.python312Packages.flake8
+    pkgs.python312Packages.prompt-toolkit
+    pkgs.python312Packages.mcp
+    pkgs.pyright
+    pkgs.git
   ];
 
   shellHook = ''
-    export UV_PYTHON=$(which python)
-    export PYTHONPATH=$PWD/src:$PWD/tests
+    export PYTHONPATH="$PWD/src:$PWD/tests:$PYTHONPATH"
     export PATH="$PWD/bin:$PATH"
-    uv sync --all-extras
-    echo "uv     python version = $(uv run python --version)"
-    echo "system python version = $(python --version)"
     if [ -t 1 ] && [ "${dontrunmenu}" != "1" ]; then
-      uv run python -m menu.menu
+      python -m menu.menu
       exit $?
     fi
   '';

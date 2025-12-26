@@ -28,10 +28,10 @@ $ nix-shell
 # start the MCP Server and the SuperAssistant Proxy
 
 # Start the MCP-Grok server manually
-$ nix-shell --argstr dontrunmenu "1" --run 'uv run python -m mcp_grok.mcp_grok_server'
+$ nix-shell --argstr dontrunmenu "1" --run 'python -m mcp_grok.mcp_grok_server'
 
 # Or with options using mcp-grok-server:
-$ nix-shell --argstr dontrunmenu "1" --run 'uv run python -m mcp_grok.mcp_grok_server --port 8099 --projects-dir ~/dev/my-projects --default-project testproject'
+$ nix-shell --argstr dontrunmenu "1" --run 'python -m mcp_grok.mcp_grok_server --port 8099 --projects-dir ~/dev/my-projects --default-project testproject'
 
 # Start the SuperAssistant Proxy manually
 $ nix-shell --argstr dontrunmenu "1" --run 'superassistant-proxy'
@@ -93,7 +93,7 @@ This project uses both a linter and a static type checker, just like in CI. You 
 [flake8](https://flake8.pycqa.org/) checks your code for common style, bug, and complexity issues.
 
 ```sh
-nix-shell --argstr dontrunmenu "1" --run "uv run flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics && uv run flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics"
+nix-shell --argstr dontrunmenu "1" --run "flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics && flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics"
 ```
 
 - The first run enforces strict errors; the second provides statistics with relaxed rules (like line length and complexity), matching CI.
@@ -103,7 +103,7 @@ nix-shell --argstr dontrunmenu "1" --run "uv run flake8 src tests --count --sele
 [pyright](https://github.com/microsoft/pyright) performs static type checking for Python.
 
 ```sh
-nix-shell --argstr dontrunmenu "1" --run "uv run pyright ."
+nix-shell --argstr dontrunmenu "1" --run "pyright ."
 ```
 
 - This checks for type errors across the project, as in CI.
@@ -111,7 +111,7 @@ nix-shell --argstr dontrunmenu "1" --run "uv run pyright ."
 ## Running Tests
 
 ```sh
-nix-shell --argstr dontrunmenu "1" --run 'uv run pytest tests'
+nix-shell --argstr dontrunmenu "1" --run 'pytest tests'
 ```
 
 Tests launch the server in a subprocess, simulate real tool API requests, and clean up after themselves. All main features are covered, including project management, shell execution, API error handling, and session management.

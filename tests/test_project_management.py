@@ -10,7 +10,7 @@ from test_utils import mcp_create_project, mcp_execute_shell
 
 
 def get_json_headers():
-    return {"Accept": "application/json", "Content-Type": "application/json"}
+    return {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
 
 
 def build_tools_call_payload(name, arguments=None, id=1):
@@ -124,7 +124,7 @@ def wait_for_server_ready(server_proc, timeout=30):
 
 def get_active_project(url, default_project, default_proj_path):
     """Request active project via API and validate response."""
-    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    headers = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
     payload = {
         "jsonrpc": "2.0", "id": 32177, "method": "tools/call",
         "params": {"name": "get_active_project"}

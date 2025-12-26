@@ -16,7 +16,7 @@ def api_write_file(server_url, file_path, content, **extra_args):
             "arguments": args,
         },
     }
-    headers = {"Accept": "application/json"}
+    headers = {"Accept": "application/json, text/event-stream"}
     resp = requests.post(server_url, json=payload, headers=headers)
     assert resp.status_code == 200, f"HTTP failure: {resp.text}"
     data = resp.json()
@@ -42,7 +42,7 @@ def api_read_file(server_url, file_path, limit=None, offset=None):
             "arguments": args,
         },
     }
-    headers = {"Accept": "application/json"}
+    headers = {"Accept": "application/json, text/event-stream"}
     resp = requests.post(server_url, json=payload, headers=headers)
     assert resp.status_code == 200, f"HTTP failure: {resp.text}"
     data = resp.json()
@@ -62,7 +62,7 @@ def api_read_file(server_url, file_path, limit=None, offset=None):
 
 def mcp_create_project(server_url, project_name):
     """Create project via MCP API."""
-    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    headers = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
     payload = {
         "jsonrpc": "2.0",
         "id": 1,
@@ -83,7 +83,7 @@ def mcp_create_project(server_url, project_name):
 
 def mcp_execute_shell(server_url, command):
     """Run shell command via MCP API."""
-    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    headers = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
     payload = {
         "jsonrpc": "2.0",
         "id": 2,

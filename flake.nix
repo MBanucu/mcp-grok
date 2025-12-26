@@ -38,13 +38,18 @@
       devShells.${system}.default = pkgs.mkShell {
         buildInputs = [
           pkgs.python312
-          pkgs.python312Packages.pip
           pkgs.python312Packages.pytest
           pkgs.python312Packages.flake8
           pkgs.pyright
+          pkgs.python312Packages.requests
           pkgs.git
         ];
         inputsFrom = [ self.packages.${system}.default ];
+        shellHook = ''
+          export PYTHONPATH="$PWD/src:$PWD/tests:$PYTHONPATH"
+          export PATH="$PWD/bin:$PATH"
+          echo "[devShell] PYTHONPATH set to $PYTHONPATH"
+        '';
       };
 
     };
