@@ -35,41 +35,43 @@
           mainProgram = "mcp-grok-server";
         };
       };
-      devShells.${system}.default = pkgs.mkShell {
-        buildInputs = [
-          pkgs.python312
-          pkgs.python312Packages.pytest
-          pkgs.python312Packages.flake8
-          pkgs.pyright
-          pkgs.python312Packages.requests
-          pkgs.git
-        ];
-        inputsFrom = [ self.packages.${system}.default ];
-shellHook = ''
-          export PYTHONPATH="$PWD/src:$PWD/tests:$PYTHONPATH"
-          export PATH="$PWD/bin:$PATH"
-          echo "[devShell] PYTHONPATH set to $PYTHONPATH"
-          python -m menu.menu
-          exit $?
-        '';
+      devShells.${system} = {
+        default = pkgs.mkShell {
+          buildInputs = [
+            pkgs.python312
+            pkgs.python312Packages.pytest
+            pkgs.python312Packages.flake8
+            pkgs.pyright
+            pkgs.python312Packages.requests
+            pkgs.git
+          ];
+          inputsFrom = [ self.packages.${system}.default ];
+          shellHook = ''
+            export PYTHONPATH="$PWD/src:$PWD/tests:$PYTHONPATH"
+            export PATH="$PWD/bin:$PATH"
+            echo "[devShell] PYTHONPATH set to $PYTHONPATH"
+            python -m menu.menu
+            exit $?
+          '';
+        };
+        menuSuppressed = pkgs.mkShell {
+          buildInputs = [
+            pkgs.python312
+            pkgs.python312Packages.pytest
+            pkgs.python312Packages.flake8
+            pkgs.pyright
+            pkgs.python312Packages.requests
+            pkgs.git
+          ];
+          inputsFrom = [ self.packages.${system}.default ];
+          shellHook = ''
+            export PYTHONPATH="$PWD/src:$PWD/tests:$PYTHONPATH"
+            export PATH="$PWD/bin:$PATH"
+            echo "[devShell(menuSuppressed)] PYTHONPATH set to $PYTHONPATH (menu suppressed)"
+          '';
+        };
       };
 
-      devShells.${system}.menuSuppressed = pkgs.mkShell {
-        buildInputs = [
-          pkgs.python312
-          pkgs.python312Packages.pytest
-          pkgs.python312Packages.flake8
-          pkgs.pyright
-          pkgs.python312Packages.requests
-          pkgs.git
-        ];
-        inputsFrom = [ self.packages.${system}.default ];
-        shellHook = ''
-          export PYTHONPATH="$PWD/src:$PWD/tests:$PYTHONPATH"
-          export PATH="$PWD/bin:$PATH"
-          echo "[devShell(menuSuppressed)] PYTHONPATH set to $PYTHONPATH (menu suppressed)"
-        '';
-      };
 
 
 
