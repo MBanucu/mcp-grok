@@ -132,9 +132,66 @@ Tests launch the server in a subprocess, simulate real tool API requests, and cl
 ## Security Notes
 **Warning: NEVER expose this server to the public internet, as it allows shell access, though strictly sandboxed per project/user.**
 
-## License
+## NixOS System Integration & Advanced Usage
 
-This project is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for details.
+### Use as a system package in NixOS
+
+If you want to provide the `mcp-grok-server` as a system package on NixOS using the flake, add this flake as an input to your NixOS configuration:
+
+```nix
+# In your flakes-enabled NixOS configuration (flake.nix):
+{
+  inputs.mcp-grok.url = "github:MBanucu/mcp-grok";
+
+  outputs = { self, nixpkgs, mcp-grok, ... }@inputs: {
+    nixosConfigurations.mymachine = nixpkgs.lib.nixosSystem {
+      # ...
+      environment.systemPackages = [ mcp-grok.packages.${inputs.nixpkgs.system}.default ];
+      # ...
+    };
+  };
+}
+```
+
+> If not using flakes, see Overlay/Legacy Usage below for compatibility.
+
+### Use as an input in another flake project
+
+You can add this project as an input to your own flake-based Python/Nix project:
+
+```nix
+# In your flake.nix
+{
+  inputs.mcp-grok.url = "github:MBanucu/mcp-grok";
+
+  outputs = { self, nixpkgs, mcp-grok, ... }@inputs: {
+    # ...
+    packages.${self.system}.mcp-grok = mcp-grok.packages.${self.system}.default;
+    devShells.${self.system}.with-mcp-grok = nixpkgs.legacyPackages.${self.system}.mkShell {
+      buildInputs = [ mcp-grok.packages.${self.system}.default ];
+    };
+  };
+}
+```
+
+### Overlay / Legacy usage
+
+If not using flakes, you can still use this project's `default.nix` as an overlay:
+
+```nix
+# overlay.nix
+self: super: {
+  mcp-grok = import (builtins.fetchGit {
+    url = "https://github.com/MBanucu/mcp-grok.git";
+    # Optionally specify rev and sha256
+  });
+}
+```
+
+Add to NIX_PATH overlays or use in your legacy Nix expressions.
+
+> The provided `default.nix` forwards transparently to the flake package for maximal compatibility as an overlay or with legacy `nix-build`.
 
 ---
 Happy grokking, and feel free to contribute or file issues!
+
