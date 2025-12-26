@@ -49,7 +49,7 @@
           export PYTHONPATH="$PWD/src:$PWD/tests:$PYTHONPATH"
           export PATH="$PWD/bin:$PATH"
           echo "[devShell] PYTHONPATH set to $PYTHONPATH"
-          if [ -t 1 ] && [ "${dontrunmenu}" != "1" ]; then
+          if [ -t 1 ] && [ "${dontrunmenu:-}" != "1" ]; then
             python -m menu.menu
             exit $?
           fi
