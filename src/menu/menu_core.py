@@ -45,7 +45,7 @@ class ServerManager:
 
         log = open(MCP_LOGFILE, "a")
         proc = subprocess.Popen(
-            ['server', '--port', str(port)],
+            ['mcp-grok-server', '--port', str(port)],
             stdout=log,
             stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL,

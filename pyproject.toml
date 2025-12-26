@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [project.scripts]
-server = "mcp_grok.server:main"
+mcp-grok-server = "mcp_grok.server:main"
 menu = "menu.menu:main"
 
 [project.optional-dependencies]

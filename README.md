@@ -22,16 +22,16 @@ A secure, project-oriented persistent shell management server, built on FastMCP.
 $ git clone https://github.com/MBanucu/mcp-grok.git
 $ cd mcp-grok
 
-# Start the server using nix-shell with menu (recommended)
+# Start the MCP-Grok server using nix-shell with menu (recommended)
 $ nix-shell
 # an interactive menu will pop up
 # start the MCP Server and the SuperAssistant Proxy
 
-# Start the MCP Server manually
-$ nix-shell --argstr dontrunmenu "1" --run 'uv run python -m server'
+# Start the MCP-Grok server manually
+$ nix-shell --argstr dontrunmenu "1" --run 'uv run python -m mcp_grok.server'
 
-# Or with options:
-$ nix-shell --argstr dontrunmenu "1" --run 'uv run python -m server --port 8099 --projects-dir ~/dev/my-projects --default-project testproject'
+# Or with options using mcp-grok-server:
+$ nix-shell --argstr dontrunmenu "1" --run 'uv run python -m mcp_grok.server --port 8099 --projects-dir ~/dev/my-projects --default-project testproject'
 
 # Start the SuperAssistant Proxy manually
 $ nix-shell --argstr dontrunmenu "1" --run 'superassistant-proxy'

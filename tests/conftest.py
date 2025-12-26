@@ -14,7 +14,7 @@ def mcp_server():
         shutil.rmtree(DEV_ROOT)
     os.makedirs(DEV_ROOT, exist_ok=True)
     server_proc = subprocess.Popen([
-        "uv", "run", "python", "-m", "server", "--port", str(PORT), "--projects-dir", DEV_ROOT
+        "uv", "run", "python", "-m", "mcp_grok.server", "--port", str(PORT), "--projects-dir", DEV_ROOT
     ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     start_time = time.time()
     while True:

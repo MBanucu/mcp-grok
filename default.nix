@@ -33,7 +33,7 @@ pkgs.python312Packages.buildPythonApplication {
   '';
 
   meta = with pkgs.lib; {
-    description = "FastMCP-based persistent project shell server";
+    description = "FastMCP-based persistent project shell and API server (mcp-grok-server)";
     homepage = "https://github.com/MBanucu/mcp-grok";
     license = licenses.gpl3Only;
     maintainers = [ ];
