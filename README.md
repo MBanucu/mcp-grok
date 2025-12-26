@@ -37,17 +37,18 @@ $ nix develop .# --command python -m mcp_grok.mcp_grok_server --port 8099 --proj
 $ nix develop .# --command superassistant-proxy
 ```
 
-> **Advanced:**  
-> To prevent the interactive menu from starting automatically in your flake shell (e.g., for scripting or CI), run:
-> 
+> **Advanced:**
+> For environments where you want to suppress the interactive menu (such as CI, scripts, or automation), use the `menuSuppressed` Nix flake shell:
+>
 > ```sh
-> dontrunmenu=1 nix develop .#
+> nix develop .#menuSuppressed
 > ```
-> For a non-interactive shell or in scripts, prefix any command with `dontrunmenu=1`, e.g.
-> 
+> For direct command-line usage, always wrap your shell command in `sh -c '...'`:
+>
 > ```sh
-> dontrunmenu=1 nix develop .# --command python -m pytest tests
+> nix develop .#menuSuppressed --command sh -c 'python -m pytest tests'
 > ```
+> This guarantees the shell is set up exactly as for development, with no interactive menu and full access to all CLI tools.
 
 
 
