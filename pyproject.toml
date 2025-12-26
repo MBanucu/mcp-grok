@@ -7,17 +7,17 @@ requires-python = ">=3.12"
 dependencies = [
     "mcp[cli]",
     "prompt-toolkit",
-    "pytest",
+
 ]
 
 [project.scripts]
-server = "server:main"
+server = "mcp_grok.server:main"
 menu = "menu.menu:main"
 
 [project.optional-dependencies]
 typecheck = ["pyright"]
 lint = ["flake8"]
-test = ["requests"]
+test = ["pytest", "requests"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -1,22 +1,36 @@
 import logging
-from mcp_grok.config import Config
-from mcp_grok.shell_manager import ShellManager
+from .config import Config
+from .shell_manager import ShellManager
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 from mcp.types import ToolAnnotations
 from typing import Optional
-from mcp_grok.file_tools import read_file as file_tools_read_file, write_file as file_tools_write_file
+from .file_tools import read_file as file_tools_read_file, write_file as file_tools_write_file
 
 config = Config()
+
+import os
+# Ensure log directory exists and is writable, or fallback to /tmp
+logfile = config.log_file
+logdir = os.path.dirname(logfile)
+try:
+    os.makedirs(logdir, exist_ok=True)
+    # Try to open in append mode to check writability
+    with open(logfile, "a"): pass
+except Exception:
+    logfile = "/tmp/server_audit.log"
+    logdir = "/tmp"
+    os.makedirs(logdir, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(levelname)s %(message)s',
     handlers=[
-        logging.FileHandler(config.log_file),
+        logging.FileHandler(logfile),
         logging.StreamHandler()
     ]
 )
+
 
 logger = logging.getLogger(__name__)
 

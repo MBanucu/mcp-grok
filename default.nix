@@ -27,6 +27,8 @@ pkgs.python312Packages.buildPythonApplication {
     mkdir -p $out/bin
     cp ./bin/superassistant-proxy $out/bin/superassistant-proxy
     chmod +x $out/bin/superassistant-proxy
+    # Copy config.json for runtime use by proxy
+    cp ./config.json $out/bin/config.json
     runHook postInstall
   '';
 

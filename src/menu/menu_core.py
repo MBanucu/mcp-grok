@@ -2,8 +2,26 @@ import os
 import subprocess
 import socket
 
-MCP_LOGFILE = "mcp_server.log"
-PROXY_LOGFILE = "superassistant_proxy.log"
+import pathlib
+MCP_LOGFILE = str(pathlib.Path.home() / ".mcp-grok" / "mcp_server.log")
+PROXY_LOGFILE = str(pathlib.Path.home() / ".mcp-grok" / "superassistant_proxy.log")
+
+def _writable_logfile(preferred):
+    logdir = os.path.dirname(preferred)
+    try:
+        os.makedirs(logdir, exist_ok=True)
+        with open(preferred, "a"): pass
+        return preferred
+    except Exception:
+        fallback = "/tmp/" + os.path.basename(preferred)
+        try:
+            with open(fallback, "a"): pass
+            return fallback
+        except Exception:
+            raise RuntimeError(f"Unable to create log file in {preferred} or /tmp")
+
+MCP_LOGFILE = _writable_logfile(MCP_LOGFILE)
+PROXY_LOGFILE = _writable_logfile(PROXY_LOGFILE)
 
 
 class ServerManager:
@@ -27,7 +45,7 @@ class ServerManager:
 
         log = open(MCP_LOGFILE, "a")
         proc = subprocess.Popen(
-            ['python', '-m', 'server', '--port', str(port)],
+            ['server', '--port', str(port)],
             stdout=log,
             stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL,
