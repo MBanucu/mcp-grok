@@ -93,7 +93,7 @@ def test_change_active_project(mcp_server):
 def start_server(projects_dir, port, default_project):
     """Start the server process with the given parameters."""
     return subprocess.Popen([
-        "python", "-m", "src.server",
+        "python", "-m", "mcp_grok.mcp_grok_server",
         "--port", str(port),
         "--projects-dir", projects_dir,
         "--default-project", default_project

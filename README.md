@@ -28,10 +28,10 @@ $ nix-shell
 # start the MCP Server and the SuperAssistant Proxy
 
 # Start the MCP-Grok server manually
-$ nix-shell --argstr dontrunmenu "1" --run 'uv run python -m mcp_grok.server'
+$ nix-shell --argstr dontrunmenu "1" --run 'uv run python -m mcp_grok.mcp_grok_server'
 
 # Or with options using mcp-grok-server:
-$ nix-shell --argstr dontrunmenu "1" --run 'uv run python -m mcp_grok.server --port 8099 --projects-dir ~/dev/my-projects --default-project testproject'
+$ nix-shell --argstr dontrunmenu "1" --run 'uv run python -m mcp_grok.mcp_grok_server --port 8099 --projects-dir ~/dev/my-projects --default-project testproject'
 
 # Start the SuperAssistant Proxy manually
 $ nix-shell --argstr dontrunmenu "1" --run 'superassistant-proxy'
@@ -117,7 +117,7 @@ nix-shell --argstr dontrunmenu "1" --run 'uv run pytest tests'
 Tests launch the server in a subprocess, simulate real tool API requests, and clean up after themselves. All main features are covered, including project management, shell execution, API error handling, and session management.
 
 ## Project Structure
-- `src/server.py` : Main server entry; all logic.
+- `src/mcp_grok/mcp_grok_server.py` : Main server entry; all logic.
 - `tests/` : Pytest-based functional and integration tests.
 - `pyproject.toml` : Dependency and build config.
 
