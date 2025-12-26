@@ -22,27 +22,30 @@ A secure, project-oriented persistent shell management server, built on FastMCP.
 $ git clone https://github.com/MBanucu/mcp-grok.git
 $ cd mcp-grok
 
-# Start the MCP-Grok server using nix-shell with mcp-grok-menu (recommended)
-$ nix-shell
+# Start the MCP-Grok server using flakes (recommended)
+$ nix develop .#
 # an interactive project management menu will pop up
 # start the MCP Server and the SuperAssistant Proxy
 
 # Start the MCP-Grok server manually
-$ nix-shell --argstr dontrunmenu "1" --run 'python -m mcp_grok.mcp_grok_server'
+$ nix develop .# --command python -m mcp_grok.mcp_grok_server
 
 # Or with options using mcp-grok-server:
-$ nix-shell --argstr dontrunmenu "1" --run 'python -m mcp_grok.mcp_grok_server --port 8099 --projects-dir ~/dev/my-projects --default-project testproject'
+$ nix develop .# --command python -m mcp_grok.mcp_grok_server --port 8099 --projects-dir ~/dev/my-projects --default-project testproject
 
 # Start the SuperAssistant Proxy manually
-$ nix-shell --argstr dontrunmenu "1" --run 'superassistant-proxy'
+$ nix develop .# --command superassistant-proxy
 ```
 
 > **Advanced:**  
-> To prevent the interactive menu from starting automatically in your nix-shell (e.g., for scripting or CI), run:
+> To prevent the interactive menu from starting automatically in your flake shell (e.g., for scripting or CI), run:
 > 
 > ```sh
-> nix-shell --argstr dontrunmenu "1"
+> nix develop .# --keep dontrunmenu --command '
+bash'
 > ```
+> (or use `env dontrunmenu=1 nix develop .#` for one-shot scripting)
+
 
 The server runs locally by default, listens on the configured port, and exposes a FastMCP-compatible HTTP+JSON endpoint at `/mcp` (usually, e.g. http://localhost:8000/mcp).
 
@@ -103,7 +106,7 @@ nix develop .# --command sh -c 'flake8 src tests --count --select=E9,F63,F7,F82 
 [pyright](https://github.com/microsoft/pyright) performs static type checking for Python.
 
 ```sh
-nix-shell --argstr dontrunmenu "1" --run "pyright ."
+nix develop .# --command pyright .
 ```
 
 - This checks for type errors across the project, as in CI.
@@ -111,7 +114,7 @@ nix-shell --argstr dontrunmenu "1" --run "pyright ."
 ## Running Tests
 
 ```sh
-nix-shell --argstr dontrunmenu "1" --run 'pytest tests'
+nix develop .# --command python -m pytest tests
 ```
 
 Tests launch the server in a subprocess, simulate real tool API requests, and clean up after themselves. All main features are covered, including project management, shell execution, API error handling, and session management.
