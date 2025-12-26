@@ -41,10 +41,14 @@ $ nix develop .# --command superassistant-proxy
 > To prevent the interactive menu from starting automatically in your flake shell (e.g., for scripting or CI), run:
 > 
 > ```sh
-> nix develop .# --keep dontrunmenu --command '
-bash'
+> dontrunmenu=1 nix develop .#
 > ```
-> (or use `env dontrunmenu=1 nix develop .#` for one-shot scripting)
+> For a non-interactive shell or in scripts, prefix any command with `dontrunmenu=1`, e.g.
+> 
+> ```sh
+> dontrunmenu=1 nix develop .# --command python -m pytest tests
+> ```
+
 
 
 The server runs locally by default, listens on the configured port, and exposes a FastMCP-compatible HTTP+JSON endpoint at `/mcp` (usually, e.g. http://localhost:8000/mcp).
