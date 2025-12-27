@@ -35,5 +35,7 @@ def mcp_server():
         server_proc.wait(timeout=5)
     except Exception:
         server_proc.kill()
+    if server_proc.stdout:
+        server_proc.stdout.close()
     if os.path.exists(DEV_ROOT):
         shutil.rmtree(DEV_ROOT)
