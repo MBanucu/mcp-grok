@@ -82,7 +82,6 @@ def test_proxy_log_config_error(start_stop_proxy):
     success_marker_found = False
 
     poll_start = time.perf_counter()
-    poll_count = 0
 
     while time.perf_counter() - poll_start < max_wait:
         if log_path.exists():
@@ -94,7 +93,6 @@ def test_proxy_log_config_error(start_stop_proxy):
                 if success_marker in text:
                     success_marker_found = True
                     break
-        poll_count += 1
         time.sleep(poll_interval)
     assert not error_found, "Proxy log reports a config loading error!"
     assert success_marker_found, f"Proxy log did not contain the success marker within {max_wait} seconds!"
