@@ -10,6 +10,88 @@ from mcp_grok.config import config
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 
 
+def handle_start_server(state):
+    state.start_mcp()
+    print("MCP Server started.")
+    return True
+
+
+def handle_stop_server(state):
+    state.stop_mcp()
+    print("MCP Server stopped.")
+    return True
+
+
+def handle_start_proxy(state):
+    state.start_proxy()
+    print("SuperAssistant Proxy started.")
+    return True
+
+
+def handle_stop_proxy(state):
+    state.stop_proxy()
+    print("SuperAssistant Proxy stopped.")
+    return True
+
+
+def handle_show_mcp_logs():
+    content = menu_core.log_content(config.mcp_server_log)
+    if content:
+        print(ANSI_ESCAPE.sub('', content[-1000:]))
+    else:
+        print("[Log is empty or does not exist]")
+    return True
+
+
+def handle_clear_mcp_logs():
+    menu_core.clear_log(config.mcp_server_log)
+    print("MCP Server log cleared.")
+    return True
+
+
+def handle_show_proxy_logs():
+    content = menu_core.log_content(config.proxy_log)
+    if content:
+        print(ANSI_ESCAPE.sub('', content[-1000:]))
+    else:
+        print("[Log is empty or does not exist]")
+    return True
+
+
+def handle_clear_proxy_logs():
+    menu_core.clear_log(config.proxy_log)
+    print("SuperAssistant Proxy log cleared.")
+    return True
+
+
+def handle_vscode():
+    print("Launching VSCode...")
+    os.system("code .")
+    return True
+
+
+def handle_cli_action(args, state):
+    if args.start_server:
+        return handle_start_server(state)
+    if args.stop_server:
+        return handle_stop_server(state)
+    if args.start_proxy:
+        return handle_start_proxy(state)
+    if args.stop_proxy:
+        return handle_stop_proxy(state)
+    if args.show_mcp_logs:
+        return handle_show_mcp_logs()
+    if args.clear_mcp_logs:
+        return handle_clear_mcp_logs()
+    if args.show_proxy_logs:
+        return handle_show_proxy_logs()
+    if args.clear_proxy_logs:
+        return handle_clear_proxy_logs()
+    if args.vscode:
+        return handle_vscode()
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="mcp-grok-menu",
@@ -58,62 +140,11 @@ def main():
     # Not adding shell as a CLI command (best in TTY only)
 
     args = parser.parse_args()
-
-    # Action flags
-    action_taken = False
     state = MenuState()
-# (whitespace intentionally kept for PEP8 block indentation)
 
-    if args.start_server:
-        state.start_mcp()
-        print("MCP Server started.")
-        action_taken = True
-    elif args.stop_server:
-        state.stop_mcp()
-        print("MCP Server stopped.")
-        action_taken = True
-    elif args.start_proxy:
-        state.start_proxy()
-        print("SuperAssistant Proxy started.")
-        action_taken = True
-    elif args.stop_proxy:
-        state.stop_proxy()
-        print("SuperAssistant Proxy stopped.")
-        action_taken = True
-    elif args.show_mcp_logs:
-        content = menu_core.log_content(config.mcp_server_log)
-        if content:
-            print(ANSI_ESCAPE.sub('', content[-1000:]))
-        else:
-            print("[Log is empty or does not exist]")
-        action_taken = True
-
-    elif args.clear_mcp_logs:
-        menu_core.clear_log(config.mcp_server_log)
-        print("MCP Server log cleared.")
-        action_taken = True
-    elif args.show_proxy_logs:
-        content = menu_core.log_content(config.proxy_log)
-        if content:
-            print(ANSI_ESCAPE.sub('', content[-1000:]))
-        else:
-            print("[Log is empty or does not exist]")
-        action_taken = True
-
-    elif args.clear_proxy_logs:
-        menu_core.clear_log(config.proxy_log)
-        print("SuperAssistant Proxy log cleared.")
-        action_taken = True
-    elif args.vscode:
-        print("Launching VSCode...")
-        os.system("code .")
-        action_taken = True
-
-    # If any CLI action taken, exit
-    if action_taken:
+    if handle_cli_action(args, state):
         sys.exit(0)
 
-    # If not TTY, print help as fallback
     if not sys.stdin.isatty():
         print(
             "\nNo interactive terminal detected "
@@ -129,7 +160,6 @@ def main():
     # TTY + no args: run TUI
     try:
         state = MenuState()
-
         app = MenuApp(state)
         app.run()
     except KeyboardInterrupt:
