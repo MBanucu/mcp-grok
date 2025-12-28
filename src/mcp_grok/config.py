@@ -20,15 +20,15 @@ class Config:
 
     @property
     def mcp_server_log(self):
-        return os.path.expanduser(f'~/.mcp-grok/mcp_server_{self.log_timestamp}.log')
+        return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_mcp_server.log')
 
     @property
     def proxy_log(self):
-        return os.path.expanduser(f'~/.mcp-grok/superassistant_proxy_{self.log_timestamp}.log')
+        return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_superassistant_proxy.log')
 
     @property
     def server_audit_log(self):
-        return os.path.expanduser(f'~/.mcp-grok/server_audit_{self.log_timestamp}.log')
+        return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_server_audit.log')
 
     port: int = 8000
     default_project: str = 'default'
