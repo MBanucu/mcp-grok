@@ -76,16 +76,19 @@ def test_clear_proxy_log():
 
 
 def test_proxy_log_config_error(start_stop_proxy):
+    """Fail if the proxy logs a config error within 3 seconds of startup."""
     start = time.time()
+    max_wait = 3.0  # lowered from 10s for faster CI/dev
+    poll_interval = 0.1
     error_found = False
-    while time.time() - start < 10:
+    while time.time() - start < max_wait:
         if os.path.exists(config.proxy_log):
             with open(config.proxy_log, "r") as f:
                 text = f.read()
                 if "Failed to load config" in text or "Error: Invalid config format" in text:
                     error_found = True
                     break
-        time.sleep(0.3)
+        time.sleep(poll_interval)
     assert not error_found, "Proxy log reports a config loading error!"
 
 
