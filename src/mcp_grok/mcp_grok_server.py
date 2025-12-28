@@ -1,5 +1,6 @@
 import logging
 import functools
+from contextlib import asynccontextmanager
 from .config import config
 from .shell_manager import ShellManager
 from mcp.server.fastmcp import FastMCP
@@ -10,29 +11,6 @@ from .file_tools import read_file as file_tools_read_file, write_file as file_to
 
 
 import os
-# Ensure log directory exists and is writable, or fallback to /tmp
-logfile = config.server_audit_log
-logdir = os.path.dirname(logfile)
-try:
-    os.makedirs(logdir, exist_ok=True)
-    # Try to open in append mode to check writability
-    with open(logfile, "a"):
-        pass
-except Exception:
-    logfile = "/tmp/server_audit.log"
-    logdir = "/tmp"
-    os.makedirs(logdir, exist_ok=True)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s %(message)s',
-    handlers=[
-        logging.FileHandler(logfile),
-        logging.StreamHandler()
-    ]
-)
-
-# Suppress noisy anyio.ClosedResourceError from logs
 
 
 def _suppress_closed_resource_error(record):
@@ -45,13 +23,57 @@ def _suppress_closed_resource_error(record):
     return True
 
 
-# Apply log suppression filter to all loggers (root and children)
-for name, log in logging.root.manager.loggerDict.items():
-    if isinstance(log, logging.Logger):
-        log.addFilter(_suppress_closed_resource_error)
-logging.getLogger().addFilter(_suppress_closed_resource_error)
+def setup_logging():
+    # Ensure log directory exists and is writable, or fallback to /tmp
+    logfile = config.server_audit_log
+    logdir = os.path.dirname(logfile)
+    try:
+        os.makedirs(logdir, exist_ok=True)
+        # Try to open in append mode to check writability
+        with open(logfile, "a"):
+            pass
+    except Exception:
+        logfile = "/tmp/server_audit.log"
+        logdir = "/tmp"
+        os.makedirs(logdir, exist_ok=True)
 
-logger = logging.getLogger(__name__)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(levelname)s %(message)s',
+        handlers=[
+            logging.FileHandler(logfile),
+            logging.StreamHandler()
+        ]
+    )
+    # Suppress noisy anyio.ClosedResourceError from logs
+    for name, log in logging.root.manager.loggerDict.items():
+        if isinstance(log, logging.Logger):
+            log.addFilter(_suppress_closed_resource_error)
+    logging.getLogger().addFilter(_suppress_closed_resource_error)
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--port', type=int, default=config.port,
+        help='Port to run MCP server on'
+    )
+    parser.add_argument(
+        '--projects-dir', type=str, default=config.projects_dir,
+        help='Base directory for MCP projects'
+    )
+    parser.add_argument(
+        '--default-project', type=str, default=config.default_project,
+        help='Name for the default project to activate on server start'
+    )
+    args = parser.parse_args()
+    config.port = args.port
+    config.projects_dir = args.projects_dir
+    config.default_project = args.default_project
+
+    setup_logging()
+
 
 shell_manager = ShellManager(config)
 
@@ -75,7 +97,7 @@ def ensure_projects_dir():
 def log_tool_call(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        logger.info(f"Tool called: {func.__name__} args={args} kwargs={kwargs}")
+        logging.getLogger(__name__).info(f"Tool called: {func.__name__} args={args} kwargs={kwargs}")
         return func(*args, **kwargs)
     return wrapper
 
@@ -185,7 +207,14 @@ def change_active_project(project_name: str) -> str:
     try:
         shell_manager.stop_shell()
     except Exception as e:
-        return f"Error: failed to stop previous shell: {e}"
+        import traceback
+        tb = traceback.format_exc()
+        return (
+            f"Error: failed to stop previous shell:\n"
+            f"Type: {type(e).__name__}\n"
+            f"Message: {e}\n"
+            f"Traceback:\n{tb}"
+        )
     try:
         return shell_manager.start_shell(proj_path)
     except Exception as e:
@@ -212,9 +241,10 @@ def read_file(file_path: str, limit: int = 2000, offset: int = 0) -> str:
     import os
     # If file_path is relative, resolve relative to shell_manager.cwd
     if not os.path.isabs(file_path):
-        if not shell_manager.cwd:
+        cwd = shell_manager.cwd
+        if not cwd:
             return "Error: No active shell/project for relative path read."
-        abs_path = os.path.join(shell_manager.cwd, file_path)
+        abs_path = os.path.join(cwd, file_path)
     else:
         abs_path = file_path
     return file_tools_read_file(abs_path, limit, offset)
@@ -258,9 +288,10 @@ def write_file(
     import os
     # If file_path is relative, resolve relative to shell_manager.cwd
     if not os.path.isabs(file_path):
-        if not shell_manager.cwd:
+        cwd = shell_manager.cwd
+        if not cwd:
             return "Error: No active shell/project for relative path write."
-        abs_path = os.path.join(shell_manager.cwd, file_path)
+        abs_path = os.path.join(cwd, file_path)
     else:
         abs_path = file_path
     return file_tools_write_file(
@@ -276,41 +307,23 @@ def write_file(
 
 # --- ENTRY POINT ---
 def main():
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--port', type=int, default=config.port,
-        help='Port to run MCP server on'
-    )
-    parser.add_argument(
-        '--projects-dir', type=str, default=config.projects_dir,
-        help='Base directory for MCP projects'
-    )
-    parser.add_argument(
-        '--default-project', type=str, default=config.default_project,
-        help='Name for the default project to activate on server start'
-    )
-    args = parser.parse_args()
-    config.port = args.port
-    config.projects_dir = args.projects_dir
-    config.default_project = args.default_project
     ensure_projects_dir()
     default_proj_path = project_path(config.default_project)
     import os
     if not os.path.exists(default_proj_path):
-        logger.info(
+        logging.getLogger(__name__).info(
             f"Server startup: default project '{config.default_project}' "
             f"does not exist. Creating new project."
         )
         result = create_new_project(config.default_project)
-        logger.info(f"Default project creation result: {result}")
+        logging.getLogger(__name__).info(f"Default project creation result: {result}")
     else:
-        logger.info(
+        logging.getLogger(__name__).info(
             f"Server startup: default project '{config.default_project}' "
             f"exists. Activating."
         )
         result = change_active_project(config.default_project)
-        logger.info(f"Default project activation result: {result}")
+        logging.getLogger(__name__).info(f"Default project activation result: {result}")
     mcp.settings.port = config.port
     mcp.run(transport="streamable-http")
 
