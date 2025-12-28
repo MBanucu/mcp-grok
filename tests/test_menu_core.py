@@ -137,7 +137,6 @@ def test_start_server_runs_and_stops():
     proc = menu_core.server_manager.start_server(port=TEST_PORT)
     assert proc is not None, "start_server did not return a process object"
     try:
-        time.sleep(1)
         assert proc.poll() is None, "Server process exited prematurely after start"
     finally:
         menu_core.server_manager.stop_server()
