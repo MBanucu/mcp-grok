@@ -47,8 +47,7 @@ async def show_log_scrollable_dialog(content: str, title: str, log_path=None):
         line_numbers=False,
         read_only=True,
         focus_on_click=True,
-        width=None,  # fill
-        height=25,
+        # No width or height specified: will fill available space
     )
     # Move cursor to end for bottom scroll
     log_textarea.buffer.cursor_position = len(log_textarea.text)
@@ -58,15 +57,19 @@ async def show_log_scrollable_dialog(content: str, title: str, log_path=None):
     @kb.add('q')
     def close_(event):
         event.app.exit()
-    dialog = Dialog(
-        title=title + ' (Scroll: ↑↓ PgUp/PgDn, q/Esc to close)',
-        body=HSplit([
-            log_textarea,
-            Label(text="Press ↑, ↓, PgUp, PgDn to scroll; q or Esc to close.", style="class:dialog.body", dont_extend_height=True)
-        ], padding=1),
-        buttons=[],
-        with_background=True
+    from prompt_toolkit.widgets import Label
+    from prompt_toolkit.layout import HSplit
+    header = Label(text=title + ' (Scroll: ↑↓ PgUp/PgDn, q/Esc to close)', style="reverse", dont_extend_height=True)
+    footer = Label(
+        text="Press ↑, ↓, PgUp, PgDn to scroll; q or Esc to close.",
+        style="reverse",
+        dont_extend_height=True,
     )
+    body = HSplit([
+        header,
+        log_textarea,
+        footer,
+    ], padding=0)
 
     # Background log watcher
     async def poll_log():
@@ -99,7 +102,7 @@ async def show_log_scrollable_dialog(content: str, title: str, log_path=None):
                 pass
     
     app = Application(
-        layout=Layout(dialog),
+        layout=Layout(body, focused_element=log_textarea.window),
         key_bindings=kb,
         style=style,
         mouse_support=True,
