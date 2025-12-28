@@ -49,7 +49,6 @@
           shellHook = ''
             export PYTHONPATH="$PWD/src:$PWD/tests:$PYTHONPATH"
             export PATH="$PWD/bin:$PATH"
-            echo "[devShell] PYTHONPATH set to $PYTHONPATH"
             python -m menu.menu
             exit $?
           '';
@@ -67,7 +66,6 @@
           shellHook = ''
             export PYTHONPATH="$PWD/src:$PWD/tests:$PYTHONPATH"
             export PATH="$PWD/bin:$PATH"
-            echo "[devShell(menuSuppressed)] PYTHONPATH set to $PYTHONPATH (menu suppressed)"
           '';
         };
       };
