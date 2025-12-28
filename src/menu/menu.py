@@ -2,6 +2,7 @@ import re
 import sys
 import argparse
 import os
+from typing import Any
 from .menu_state import MenuState
 from .menu_app import MenuApp
 from . import menu_core
@@ -10,31 +11,31 @@ from mcp_grok.config import config
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 
 
-def handle_start_server(state):
+def handle_start_server(state: MenuState) -> bool:
     state.start_mcp()
     print("MCP Server started.")
     return True
 
 
-def handle_stop_server(state):
+def handle_stop_server(state: MenuState) -> bool:
     state.stop_mcp()
     print("MCP Server stopped.")
     return True
 
 
-def handle_start_proxy(state):
+def handle_start_proxy(state: MenuState) -> bool:
     state.start_proxy()
     print("SuperAssistant Proxy started.")
     return True
 
 
-def handle_stop_proxy(state):
+def handle_stop_proxy(state: MenuState) -> bool:
     state.stop_proxy()
     print("SuperAssistant Proxy stopped.")
     return True
 
 
-def handle_show_mcp_logs():
+def handle_show_mcp_logs() -> bool:
     content = menu_core.log_content(config.mcp_shell_log)
     if content:
         print(ANSI_ESCAPE.sub('', content[-1000:]))
@@ -43,13 +44,13 @@ def handle_show_mcp_logs():
     return True
 
 
-def handle_clear_mcp_logs():
+def handle_clear_mcp_logs() -> bool:
     menu_core.clear_log(config.mcp_shell_log)
     print("MCP Shell log cleared.")
     return True
 
 
-def handle_show_proxy_logs():
+def handle_show_proxy_logs() -> bool:
     content = menu_core.log_content(config.proxy_log)
     if content:
         print(ANSI_ESCAPE.sub('', content[-1000:]))
@@ -58,19 +59,19 @@ def handle_show_proxy_logs():
     return True
 
 
-def handle_clear_proxy_logs():
+def handle_clear_proxy_logs() -> bool:
     menu_core.clear_log(config.proxy_log)
     print("SuperAssistant Proxy log cleared.")
     return True
 
 
-def handle_vscode():
+def handle_vscode() -> bool:
     print("Launching VSCode...")
     os.system("code .")
     return True
 
 
-def handle_cli_action(args, state):
+def handle_cli_action(args: argparse.Namespace, state: MenuState) -> bool:
     if args.start_server:
         return handle_start_server(state)
     if args.stop_server:
@@ -92,7 +93,7 @@ def handle_cli_action(args, state):
     return False
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         prog="mcp-grok-menu",
         description=(
