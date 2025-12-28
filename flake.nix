@@ -3,21 +3,27 @@
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
 
-  outputs = { self, nixpkgs }:
+  outputs =
+    { self, nixpkgs }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
-    in {
+    in
+    {
       packages.${system}.default = pkgs.python312Packages.buildPythonApplication {
         pname = "mcp-grok";
-        version = "0.1.1";
+        version = "0.1.2";
         src = ./.;
         format = "pyproject";
         propagatedBuildInputs = [
           pkgs.python312Packages.mcp
           pkgs.python312Packages.prompt-toolkit
         ];
-        nativeBuildInputs = with pkgs.python312Packages; [ setuptools wheel pip ];
+        nativeBuildInputs = with pkgs.python312Packages; [
+          setuptools
+          wheel
+          pip
+        ];
         installPhase = ''
           runHook preInstall
           ${pkgs.python312Packages.pip}/bin/pip install . --prefix=$out --no-build-isolation --no-deps
@@ -31,7 +37,7 @@
           description = "FastMCP-based persistent project shell and API server (mcp-grok-server)";
           homepage = "https://github.com/MBanucu/mcp-grok";
           license = licenses.gpl3Only;
-          maintainers = [];
+          maintainers = [ ];
           mainProgram = "mcp-grok-server";
         };
       };
@@ -69,9 +75,5 @@
           '';
         };
       };
-
-
-
-
     };
 }
