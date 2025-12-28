@@ -39,6 +39,10 @@ def _suppress_closed_resource_error(record):
     if exc and exc[0] and "ClosedResourceError" in str(exc[0]):
         return False
     return True
+# Apply log suppression filter to all loggers (root and children)
+for name, log in logging.root.manager.loggerDict.items():
+    if isinstance(log, logging.Logger):
+        log.addFilter(_suppress_closed_resource_error)
 logging.getLogger().addFilter(_suppress_closed_resource_error)
 
 logger = logging.getLogger(__name__)
