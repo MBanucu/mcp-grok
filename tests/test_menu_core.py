@@ -5,8 +5,6 @@ from menu import menu_core
 from mcp_grok.config import config
 
 
-
-
 @pytest.fixture
 def start_stop_server():
     """

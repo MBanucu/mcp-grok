@@ -4,6 +4,7 @@ from tests.test_utils import api_write_file, api_read_file
 
 from tests.test_utils import api_change_active_project
 
+
 def test_write_relative_path_in_project(mcp_server):
     server_url = mcp_server
     api_change_active_project(server_url, "default")

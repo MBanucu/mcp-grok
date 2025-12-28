@@ -4,8 +4,8 @@ import dataclasses
 from dataclasses import dataclass
 from typing import List
 
-
 import datetime
+
 
 @dataclass
 class Config:
@@ -42,6 +42,7 @@ class Config:
     @property
     def server_audit_log(self):
         return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_{self.port}_server_audit.log')
+
 
 # The canonical singleton Config instance for codebase-wide import
 config = Config()

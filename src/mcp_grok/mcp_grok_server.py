@@ -1,4 +1,5 @@
 import logging
+import functools
 from .config import config
 from .shell_manager import ShellManager
 from mcp.server.fastmcp import FastMCP
@@ -15,7 +16,8 @@ logdir = os.path.dirname(logfile)
 try:
     os.makedirs(logdir, exist_ok=True)
     # Try to open in append mode to check writability
-    with open(logfile, "a"): pass
+    with open(logfile, "a"):
+        pass
 except Exception:
     logfile = "/tmp/server_audit.log"
     logdir = "/tmp"
@@ -31,6 +33,8 @@ logging.basicConfig(
 )
 
 # Suppress noisy anyio.ClosedResourceError from logs
+
+
 def _suppress_closed_resource_error(record):
     msg = record.getMessage()
     if "ClosedResourceError" in msg:
@@ -39,6 +43,8 @@ def _suppress_closed_resource_error(record):
     if exc and exc[0] and "ClosedResourceError" in str(exc[0]):
         return False
     return True
+
+
 # Apply log suppression filter to all loggers (root and children)
 for name, log in logging.root.manager.loggerDict.items():
     if isinstance(log, logging.Logger):
@@ -49,6 +55,7 @@ logger = logging.getLogger(__name__)
 
 shell_manager = ShellManager(config)
 
+
 # --- PROJECT MANAGEMENT HELPERS ---
 
 
@@ -58,16 +65,12 @@ def safe_project_name(name: str) -> bool:
 
 
 def project_path(name: str) -> str:
-    import os
     return os.path.join(config.projects_dir, name)
 
 
 def ensure_projects_dir():
-    import os
     os.makedirs(config.projects_dir, exist_ok=True)
 
-
-import functools
 
 def log_tool_call(func):
     @functools.wraps(func)
@@ -75,6 +78,7 @@ def log_tool_call(func):
         logger.info(f"Tool called: {func.__name__} args={args} kwargs={kwargs}")
         return func(*args, **kwargs)
     return wrapper
+
 
 # --- MCP SERVER SETUP ---
 mcp = FastMCP(

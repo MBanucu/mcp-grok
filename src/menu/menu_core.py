@@ -4,20 +4,22 @@ import socket
 
 from mcp_grok.config import config
 
+
 def _writable_logfile(preferred):
     logdir = os.path.dirname(preferred)
     try:
         os.makedirs(logdir, exist_ok=True)
-        with open(preferred, "a"): pass
+        with open(preferred, "a"):
+            pass
         return preferred
     except Exception:
         fallback = "/tmp/" + os.path.basename(preferred)
         try:
-            with open(fallback, "a"): pass
+            with open(fallback, "a"):
+                pass
             return fallback
         except Exception:
             raise RuntimeError(f"Unable to create log file in {preferred} or /tmp")
-
 
 
 class ServerManager:

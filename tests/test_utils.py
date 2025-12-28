@@ -5,6 +5,7 @@ import requests
 # High-level API for test code (one abstraction each)
 # =========================
 
+
 def api_change_active_project(server_url, project_name):
     payload = {
         "jsonrpc": "2.0",
@@ -14,6 +15,7 @@ def api_change_active_project(server_url, project_name):
     }
     resp = requests.post(server_url, json=payload, headers=_json_headers())
     assert resp.status_code == 200, f"Failed to change project: {resp.text}"
+
 
 def mcp_create_project(server_url, project_name):
     """Create project via MCP API (asserts creation and presence on disk)."""
@@ -72,11 +74,14 @@ def api_read_file(server_url, file_path, limit=None, offset=None):
 # Pure utilities (lowest level)
 # =========================
 
+
 def _json_headers():
     return {"Accept": "application/json, text/event-stream"}
 
+
 def _json_headers_with_type():
     return {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
+
 
 def _build_write_file_payload(file_path, content, **extra_args):
     args = {"file_path": file_path, "content": content}
@@ -87,6 +92,7 @@ def _build_write_file_payload(file_path, content, **extra_args):
         "method": "tools/call",
         "params": {"name": "write_file", "arguments": args},
     }
+
 
 def _build_read_file_payload(file_path, limit=None, offset=None):
     args = {"file_path": file_path}
@@ -101,6 +107,7 @@ def _build_read_file_payload(file_path, limit=None, offset=None):
         "params": {"name": "read_file", "arguments": args},
     }
 
+
 def _build_create_project_payload(project_name):
     return {
         "jsonrpc": "2.0",
@@ -111,6 +118,7 @@ def _build_create_project_payload(project_name):
             "arguments": {"project_name": project_name},
         },
     }
+
 
 def _build_execute_shell_payload(command):
     return {
@@ -123,6 +131,7 @@ def _build_execute_shell_payload(command):
         },
     }
 
+
 def _extract_shell_output(result):
     content = result.get("content", result) if isinstance(result, dict) else result
     if isinstance(content, list):
@@ -130,6 +139,7 @@ def _extract_shell_output(result):
             item.get("text", str(item)) for item in content if isinstance(item, dict)
         ).strip()
     return str(content).strip()
+
 
 def get_last_non_empty_line(output):
     lines = [line for line in output.splitlines() if line.strip()]
