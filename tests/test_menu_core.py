@@ -89,6 +89,25 @@ def test_proxy_log_config_error(start_stop_proxy):
     assert not error_found, "Proxy log reports a config loading error!"
 
 
+def test_server_exits_on_bad_config():
+    """
+    Ensure server process dies quickly and cleanly if started with a bad port or config.
+    """
+    BAD_PORT = 1  # Privileged, reserved port; will fail to bind except as root
+    proc = menu_core.server_manager.start_server(port=BAD_PORT)
+    if proc is None:
+        pytest.skip("Cannot test: port 1 is already in use (possibly by another system process)")
+    try:
+        total_wait = 0.0
+        interval = 0.05
+        max_wait = 1.0
+        while proc.poll() is None and total_wait < max_wait:
+            time.sleep(interval)
+            total_wait += interval
+        assert proc.poll() is not None, "Server did not exit with bad config (port 1)!"
+    finally:
+        menu_core.server_manager.stop_server()
+
 def test_start_server_runs_and_stops():
     TEST_PORT = 8099
     proc = menu_core.server_manager.start_server(port=TEST_PORT)
