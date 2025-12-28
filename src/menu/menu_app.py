@@ -136,6 +136,8 @@ class MenuApp:
             ('clear_logs_mcp', 'Clear MCP Shell Log'),
             ('logs_proxy', 'View SuperAssistant Proxy Logs'),
             ('clear_logs_proxy', 'Clear Proxy Log'),
+            ('logs_audit', 'View Audit Log'),
+            ('clear_logs_audit', 'Clear Audit Log'),
             ('vscode', 'Run VSCode'),
             ('shell', 'Open Interactive Shell'),
             ('exit', 'Exit'),
@@ -265,4 +267,8 @@ class MenuApp:
             show_log(config.proxy_log, "SuperAssistant Proxy Logs")
         elif value == 'clear_logs_proxy':
             show_log(config.proxy_log, "Proxy Log", clear=True)
+        elif value == 'logs_audit':
+            show_log(config.server_audit_log, "Audit Log")
+        elif value == 'clear_logs_audit':
+            show_log(config.server_audit_log, "Audit Log", clear=True)
         return True
