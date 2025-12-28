@@ -258,6 +258,16 @@ class MenuApp:
             self.state.stop_proxy()
         return True
 
+    def _find_latest_audit_log(self):
+        import glob, os
+        pattern = os.path.expanduser('~/.mcp-grok/*_audit.log')
+        candidates = glob.glob(pattern)
+        if not candidates:
+            return None
+        # Sort by mtime (most recent first)
+        candidates.sort(key=lambda f: os.path.getmtime(f), reverse=True)
+        return candidates[0]
+
     def _handle_log_action(self, value: Optional[str]) -> bool:
         if value == 'logs_mcp':
             show_log(config.mcp_shell_log, "MCP Shell Logs")
@@ -268,7 +278,17 @@ class MenuApp:
         elif value == 'clear_logs_proxy':
             show_log(config.proxy_log, "Proxy Log", clear=True)
         elif value == 'logs_audit':
-            show_log(config.server_audit_log, "Audit Log")
+            logf = self._find_latest_audit_log()
+            if logf:
+                show_log(logf, "Audit Log")
+            else:
+                from prompt_toolkit.shortcuts import message_dialog
+                message_dialog(title="Audit Log", text="No audit log files found.").run()
         elif value == 'clear_logs_audit':
-            show_log(config.server_audit_log, "Audit Log", clear=True)
+            logf = self._find_latest_audit_log()
+            if logf:
+                show_log(logf, "Audit Log", clear=True)
+            else:
+                from prompt_toolkit.shortcuts import message_dialog
+                message_dialog(title="Audit Log", text="No audit log files found to clear.").run()
         return True
