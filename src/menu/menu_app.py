@@ -4,9 +4,12 @@ from typing import Optional
 from prompt_toolkit.shortcuts import message_dialog
 from prompt_toolkit.application import Application
 from prompt_toolkit.layout import Layout, HSplit
-from prompt_toolkit.widgets import Button, Dialog, Label
+from prompt_toolkit.widgets import Button, Dialog, Label, TextArea
 from prompt_toolkit.layout.containers import WindowAlign
 from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.layout.containers import Window
+from prompt_toolkit.layout.controls import FormattedTextControl
+from prompt_toolkit.buffer import Buffer
 from . import menu_core
 from mcp_grok.config import config
 from .menu_state import MenuState
@@ -24,10 +27,51 @@ def show_log(log_path: str, title: str, clear: bool = False) -> None:
     else:
         content = menu_core.log_content(log_path)
         if content:
-            content = ANSI_ESCAPE.sub('', content[-1000:])
+            content = ANSI_ESCAPE.sub('', content)
         else:
             content = "[Log is empty or does not exist]"
-        message_dialog(title=title, text=content).run()
+        show_log_scrollable_dialog(content, title)
+
+
+def show_log_scrollable_dialog(content: str, title: str):
+    # Set up TextArea for scrolling the content
+    from prompt_toolkit.styles import Style
+    style = Style.from_dict({'dialog': 'bg:#1d2230', 'dialog.body': 'bg:#181b29', 'dialog shadow': 'bg:#000000'})
+
+    log_textarea = TextArea(
+        text=content,
+        scrollbar=True,
+        line_numbers=False,
+        read_only=True,
+        focus_on_click=True,
+        width=None,  # fill
+        height=25,
+    )
+    # Move cursor to end for bottom scroll
+    log_textarea.buffer.cursor_position = len(log_textarea.text)
+
+    kb = KeyBindings()
+    @kb.add('escape')
+    @kb.add('q')
+    def close_(event):
+        event.app.exit()
+    dialog = Dialog(
+        title=title + ' (Scroll: ↑↓ PgUp/PgDn, q/Esc to close)',
+        body=HSplit([
+            log_textarea,
+            Label(text="Press ↑, ↓, PgUp, PgDn to scroll; q or Esc to close.", style="class:dialog.body", dont_extend_height=True)
+        ], padding=1),
+        buttons=[],
+        with_background=True
+    )
+    app = Application(
+        layout=Layout(dialog),
+        key_bindings=kb,
+        style=style,
+        mouse_support=True,
+        full_screen=True
+    )
+    app.run()
 
 
 class MenuApp:
@@ -176,11 +220,11 @@ class MenuApp:
 
     def _handle_log_action(self, value: Optional[str]) -> bool:
         if value == 'logs_mcp':
-            show_log(config.mcp_shell_log, "MCP Shell Logs (tail)")
+            show_log(config.mcp_shell_log, "MCP Shell Logs")
         elif value == 'clear_logs_mcp':
             show_log(config.mcp_shell_log, "MCP Shell Log", clear=True)
         elif value == 'logs_proxy':
-            show_log(config.proxy_log, "SuperAssistant Proxy Logs (tail)")
+            show_log(config.proxy_log, "SuperAssistant Proxy Logs")
         elif value == 'clear_logs_proxy':
             show_log(config.proxy_log, "Proxy Log", clear=True)
         return True
