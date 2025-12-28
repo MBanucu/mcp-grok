@@ -1,7 +1,16 @@
 import os
 import pytest
 
-PORT = 8109
+import socket
+
+def pick_free_port():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
+PORT = pick_free_port()
 DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test")
 
 
