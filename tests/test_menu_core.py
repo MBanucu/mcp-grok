@@ -5,24 +5,6 @@ from menu import menu_core
 from mcp_grok.config import config
 
 
-@pytest.fixture(autouse=True)
-def mcp_log_cleanup():
-    """
-    Fixture to clear the MCP server log before each test.
-    """
-    menu_core.clear_log(config.mcp_server_log)
-    yield
-    menu_core.clear_log(config.mcp_server_log)
-
-
-@pytest.fixture(autouse=True)
-def proxy_log_cleanup():
-    """
-    Fixture to clear the proxy log before each test.
-    """
-    menu_core.clear_log(config.proxy_log)
-    yield
-    menu_core.clear_log(config.proxy_log)
 
 
 @pytest.fixture

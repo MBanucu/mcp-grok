@@ -5,7 +5,7 @@ PORT = 8109
 DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test")
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def mcp_server():
     import subprocess
     import shutil
