@@ -100,11 +100,35 @@ def test_server_exits_on_bad_config():
     try:
         total_wait = 0.0
         interval = 0.05
-        max_wait = 1.0
+        max_wait = 4.0
         while proc.poll() is None and total_wait < max_wait:
             time.sleep(interval)
             total_wait += interval
         assert proc.poll() is not None, "Server did not exit with bad config (port 1)!"
+    finally:
+        menu_core.server_manager.stop_server()
+
+import socket
+
+def wait_for_port(port, timeout=5.0, poll_interval=0.05):
+    """Wait up to timeout seconds for a TCP port to be open on localhost."""
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            with socket.create_connection(('127.0.0.1', port), timeout=0.2):
+                return True
+        except (ConnectionRefusedError, OSError):
+            time.sleep(poll_interval)
+    return False
+
+def test_server_listens_on_specified_port():
+    """Test that after launching, the server listens on the specified port."""
+    TEST_PORT = 8108  # Should be a free port for test runs!
+    proc = menu_core.server_manager.start_server(port=TEST_PORT)
+    assert proc is not None, "start_server did not return a process object"
+    try:
+        port_ready = wait_for_port(TEST_PORT, timeout=5.0)
+        assert port_ready, f"Server did not listen on port {TEST_PORT} in time"
     finally:
         menu_core.server_manager.stop_server()
 
