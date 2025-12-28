@@ -53,6 +53,12 @@ def ensure_projects_dir():
     os.makedirs(config.projects_dir, exist_ok=True)
 
 
+def log_tool_call(func):
+    def wrapper(*args, **kwargs):
+        logger.info(f"Tool called: {func.__name__} args={args} kwargs={kwargs}")
+        return func(*args, **kwargs)
+    return wrapper
+
 # --- MCP SERVER SETUP ---
 mcp = FastMCP(
     "ConsoleAccessServer",
@@ -74,6 +80,7 @@ class ActiveProjectInfo(BaseModel):
     title="Execute Any Shell Command",
     annotations=ToolAnnotations(readOnlyHint=False, openWorldHint=False)
 )
+@log_tool_call
 def execute_shell(command: str = "") -> str:
     """
     Execute any single shell command in the persistent shell
@@ -88,6 +95,7 @@ def execute_shell(command: str = "") -> str:
 
 
 @mcp.tool(title="Get Active Project")
+@log_tool_call
 def get_active_project() -> ActiveProjectInfo:
     """
     Returns info about the currently active project: both name and full path.
@@ -100,6 +108,7 @@ def get_active_project() -> ActiveProjectInfo:
 
 
 @mcp.tool(title="List All Projects")
+@log_tool_call
 def list_all_projects() -> list:
     """
     Returns a sorted list of all project directories in ~/dev/mcp-projects.
@@ -113,6 +122,7 @@ def list_all_projects() -> list:
 
 
 @mcp.tool(title="Create New Project")
+@log_tool_call
 def create_new_project(project_name: str) -> str:
     """
     Creates a new project directory under
@@ -133,6 +143,7 @@ def create_new_project(project_name: str) -> str:
 
 
 @mcp.tool(title="Change Active Project")
+@log_tool_call
 def change_active_project(project_name: str) -> str:
     """
     Switch to an existing project under
@@ -164,6 +175,7 @@ def change_active_project(project_name: str) -> str:
     title="Read File Anywhere",
     annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=True)
 )
+@log_tool_call
 def read_file(file_path: str, limit: int = 2000, offset: int = 0) -> str:
     """
     Read and return up to `limit` lines from the given `file_path`, starting at line `offset`.
@@ -191,6 +203,7 @@ def read_file(file_path: str, limit: int = 2000, offset: int = 0) -> str:
     title="Write File Anywhere",
     annotations=ToolAnnotations(readOnlyHint=False, openWorldHint=True)
 )
+@log_tool_call
 def write_file(
     file_path: str,
     content: str,
