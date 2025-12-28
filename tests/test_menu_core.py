@@ -18,7 +18,7 @@ def start_stop_server():
         menu_core.server_manager.stop_server()
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def start_stop_proxy():
     """
     Fixture to start/stop the proxy process for tests.
