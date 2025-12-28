@@ -7,6 +7,9 @@ from typing import List
 
 import datetime
 
+# Module-level timestamp for all Config instances (one per process)
+_LOG_TIMESTAMP = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
 @dataclass
 class Config:
     projects_dir: str = os.path.expanduser('~/dev/mcp-projects')
@@ -16,19 +19,18 @@ class Config:
             'sudo', '-u', getpass.getuser(), '--login', 'bash', '-l'
         ]
     )
-    log_timestamp: str = dataclasses.field(default_factory=lambda: datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
 
     @property
     def mcp_server_log(self):
-        return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_mcp_server.log')
+        return os.path.expanduser(f'~/.mcp-grok/{_LOG_TIMESTAMP}_mcp_server.log')
 
     @property
     def proxy_log(self):
-        return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_superassistant_proxy.log')
+        return os.path.expanduser(f'~/.mcp-grok/{_LOG_TIMESTAMP}_superassistant_proxy.log')
 
     @property
     def server_audit_log(self):
-        return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_server_audit.log')
+        return os.path.expanduser(f'~/.mcp-grok/{_LOG_TIMESTAMP}_server_audit.log')
 
     port: int = 8000
     default_project: str = 'default'
