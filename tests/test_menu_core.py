@@ -2,6 +2,8 @@ import os
 import time
 import pytest
 from menu import menu_core
+from mcp_grok.config import Config
+config = Config()
 
 
 @pytest.fixture(autouse=True)
@@ -9,9 +11,9 @@ def mcp_log_cleanup():
     """
     Fixture to clear the MCP server log before each test.
     """
-    menu_core.clear_log(menu_core.MCP_LOGFILE)
+    menu_core.clear_log(config.mcp_server_log)
     yield
-    menu_core.clear_log(menu_core.MCP_LOGFILE)
+    menu_core.clear_log(config.mcp_server_log)
 
 
 @pytest.fixture(autouse=True)
@@ -19,9 +21,9 @@ def proxy_log_cleanup():
     """
     Fixture to clear the proxy log before each test.
     """
-    menu_core.clear_log(menu_core.PROXY_LOGFILE)
+    menu_core.clear_log(config.proxy_log)
     yield
-    menu_core.clear_log(menu_core.PROXY_LOGFILE)
+    menu_core.clear_log(config.proxy_log)
 
 
 @pytest.fixture
@@ -64,33 +66,33 @@ def test_server_log(start_stop_server):
     proc = start_stop_server
     # If proc is None, server is already running; just check log exists and is nonempty
     if proc is None:
-        if not os.path.exists(menu_core.MCP_LOGFILE):
+        if not os.path.exists(config.mcp_server_log):
             pytest.fail("Server is already running but mcp_server.log does not exist under this CWD; skipping log file check.")
-        with open(menu_core.MCP_LOGFILE, "r") as f:
+        with open(config.mcp_server_log, "r") as f:
             assert f.read().strip(), "Log file is empty even though server is running."
     else:
-        wait_for_log(menu_core.MCP_LOGFILE, timeout=10.0)  # usually instant, but waits up to 10s
+        wait_for_log(config.mcp_server_log, timeout=10.0)  # usually instant, but waits up to 10s
 
 
 def test_proxy_log(start_stop_proxy):
-    wait_for_log(menu_core.PROXY_LOGFILE, timeout=30.0)
+    wait_for_log(config.proxy_log, timeout=30.0)
 
 
 def test_clear_mcp_log():
     # Write something, then clear
-    with open(menu_core.MCP_LOGFILE, 'w') as f:
+    with open(config.mcp_server_log, 'w') as f:
         f.write('some text\n')
-    menu_core.clear_log(menu_core.MCP_LOGFILE)
-    with open(menu_core.MCP_LOGFILE, 'r') as f:
+    menu_core.clear_log(config.mcp_server_log)
+    with open(config.mcp_server_log, 'r') as f:
         assert f.read() == '', "MCP log not cleared"
 
 
 def test_clear_proxy_log():
     # Write something, then clear
-    with open(menu_core.PROXY_LOGFILE, 'w') as f:
+    with open(config.proxy_log, 'w') as f:
         f.write('other text\n')
-    menu_core.clear_log(menu_core.PROXY_LOGFILE)
-    with open(menu_core.PROXY_LOGFILE, 'r') as f:
+    menu_core.clear_log(config.proxy_log)
+    with open(config.proxy_log, 'r') as f:
         assert f.read() == '', "Proxy log not cleared"
 
 
@@ -98,8 +100,8 @@ def test_proxy_log_config_error(start_stop_proxy):
     start = time.time()
     error_found = False
     while time.time() - start < 10:
-        if os.path.exists(menu_core.PROXY_LOGFILE):
-            with open(menu_core.PROXY_LOGFILE, "r") as f:
+        if os.path.exists(config.proxy_log):
+            with open(config.proxy_log, "r") as f:
                 text = f.read()
                 if "Failed to load config" in text or "Error: Invalid config format" in text:
                     error_found = True

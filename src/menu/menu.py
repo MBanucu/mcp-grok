@@ -5,6 +5,8 @@ import os
 from .menu_state import MenuState
 from .menu_app import MenuApp
 from . import menu_core
+from mcp_grok.config import Config
+config = Config()
 
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 
@@ -48,25 +50,25 @@ def main():
         print("SuperAssistant Proxy stopped.")
         action_taken = True
     elif args.show_mcp_logs:
-        content = menu_core.log_content(menu_core.MCP_LOGFILE)
+        content = menu_core.log_content(config.mcp_server_log)
         if content:
             print(ANSI_ESCAPE.sub('', content[-1000:]))
         else:
             print("[Log is empty or does not exist]")
         action_taken = True
     elif args.clear_mcp_logs:
-        menu_core.clear_log(menu_core.MCP_LOGFILE)
+        menu_core.clear_log(config.mcp_server_log)
         print("MCP Server log cleared.")
         action_taken = True
     elif args.show_proxy_logs:
-        content = menu_core.log_content(menu_core.PROXY_LOGFILE)
+        content = menu_core.log_content(config.proxy_log)
         if content:
             print(ANSI_ESCAPE.sub('', content[-1000:]))
         else:
             print("[Log is empty or does not exist]")
         action_taken = True
     elif args.clear_proxy_logs:
-        menu_core.clear_log(menu_core.PROXY_LOGFILE)
+        menu_core.clear_log(config.proxy_log)
         print("SuperAssistant Proxy log cleared.")
         action_taken = True
     elif args.vscode:

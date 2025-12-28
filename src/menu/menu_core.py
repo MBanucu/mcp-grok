@@ -2,9 +2,8 @@ import os
 import subprocess
 import socket
 
-import pathlib
-MCP_LOGFILE = str(pathlib.Path.home() / ".mcp-grok" / "mcp_server.log")
-PROXY_LOGFILE = str(pathlib.Path.home() / ".mcp-grok" / "superassistant_proxy.log")
+from mcp_grok.config import Config
+config = Config()
 
 def _writable_logfile(preferred):
     logdir = os.path.dirname(preferred)
@@ -20,8 +19,6 @@ def _writable_logfile(preferred):
         except Exception:
             raise RuntimeError(f"Unable to create log file in {preferred} or /tmp")
 
-MCP_LOGFILE = _writable_logfile(MCP_LOGFILE)
-PROXY_LOGFILE = _writable_logfile(PROXY_LOGFILE)
 
 
 class ServerManager:
@@ -43,7 +40,7 @@ class ServerManager:
             # Server is not running
             pass
 
-        log = open(MCP_LOGFILE, "a")
+        log = open(config.mcp_server_log, "a")
         proc = subprocess.Popen(
             ['mcp-grok-server', '--port', str(port)],
             stdout=log,
@@ -70,7 +67,7 @@ server_manager = ServerManager()
 
 
 def start_proxy():
-    log = open(PROXY_LOGFILE, "a")
+    log = open(config.proxy_log, "a")
     proc = subprocess.Popen(
         ['superassistant-proxy'],
         stdin=subprocess.DEVNULL,

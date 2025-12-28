@@ -8,6 +8,8 @@ from prompt_toolkit.widgets import Button, Dialog, Label
 from prompt_toolkit.layout.containers import WindowAlign
 from prompt_toolkit.key_binding import KeyBindings
 from . import menu_core
+from mcp_grok.config import Config
+config = Config()
 from .menu_state import MenuState
 
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
@@ -175,14 +177,11 @@ class MenuApp:
 
     def _handle_log_action(self, value: Optional[str]) -> bool:
         if value == 'logs_mcp':
-            show_log(menu_core.MCP_LOGFILE, "MCP Server Logs (tail)")
+            show_log(config.mcp_server_log, "MCP Server Logs (tail)")
         elif value == 'clear_logs_mcp':
-            show_log(menu_core.MCP_LOGFILE, "MCP Server Log", clear=True)
+            show_log(config.mcp_server_log, "MCP Server Log", clear=True)
         elif value == 'logs_proxy':
-            show_log(
-                menu_core.PROXY_LOGFILE,
-                "SuperAssistant Proxy Logs (tail)"
-            )
+            show_log(config.proxy_log, "SuperAssistant Proxy Logs (tail)")
         elif value == 'clear_logs_proxy':
-            show_log(menu_core.PROXY_LOGFILE, "Proxy Log", clear=True)
+            show_log(config.proxy_log, "Proxy Log", clear=True)
         return True

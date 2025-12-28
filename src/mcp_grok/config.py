@@ -14,6 +14,9 @@ class Config:
             'sudo', '-u', getpass.getuser(), '--login', 'bash', '-l'
         ]
     )
-    log_file: str = os.path.expanduser('~/.mcp-grok/server_audit.log')
+    # Centralized log files
+    mcp_server_log: str = os.path.expanduser('~/.mcp-grok/mcp_server.log')
+    proxy_log: str = os.path.expanduser('~/.mcp-grok/superassistant_proxy.log')
+    server_audit_log: str = os.path.expanduser('~/.mcp-grok/server_audit.log')
     port: int = 8000
     default_project: str = 'default'

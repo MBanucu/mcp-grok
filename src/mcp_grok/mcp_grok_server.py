@@ -11,7 +11,7 @@ config = Config()
 
 import os
 # Ensure log directory exists and is writable, or fallback to /tmp
-logfile = config.log_file
+logfile = config.server_audit_log
 logdir = os.path.dirname(logfile)
 try:
     os.makedirs(logdir, exist_ok=True)
