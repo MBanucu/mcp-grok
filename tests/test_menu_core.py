@@ -89,6 +89,8 @@ def test_proxy_log_config_error(start_stop_proxy):
                     error_found = True
                     break
         time.sleep(poll_interval)
+    duration = time.time() - start
+    print(f"test_proxy_log_config_error completed in {duration:.2f} seconds")
     assert not error_found, "Proxy log reports a config loading error!"
 
 
