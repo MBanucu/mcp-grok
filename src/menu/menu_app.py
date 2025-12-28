@@ -221,7 +221,7 @@ class MenuApp:
             return self._handle_server_action(value)
         elif value in ('proxy', 'shutdown_proxy'):
             return self._handle_proxy_action(value)
-        elif value in ('logs_mcp', 'clear_logs_mcp', 'logs_proxy', 'clear_logs_proxy'):
+        elif value in ('logs_mcp', 'clear_logs_mcp', 'logs_proxy', 'clear_logs_proxy', 'logs_audit', 'clear_logs_audit'):
             return self._handle_log_action(value)
         elif value in ('vscode', 'shell', 'exit', None):
             return self._handle_external_action(value)
@@ -279,6 +279,7 @@ class MenuApp:
             show_log(config.proxy_log, "Proxy Log", clear=True)
         elif value == 'logs_audit':
             logf = self._find_latest_audit_log()
+            print("Latest audit log file:", logf)
             if logf:
                 show_log(logf, "Audit Log")
             else:
@@ -286,6 +287,7 @@ class MenuApp:
                 message_dialog(title="Audit Log", text="No audit log files found.").run()
         elif value == 'clear_logs_audit':
             logf = self._find_latest_audit_log()
+            print("Latest audit log file for clear:", logf)
             if logf:
                 show_log(logf, "Audit Log", clear=True)
             else:
