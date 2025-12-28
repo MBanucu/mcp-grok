@@ -30,10 +30,13 @@ def show_log(log_path: str, title: str, clear: bool = False) -> None:
             content = ANSI_ESCAPE.sub('', content)
         else:
             content = "[Log is empty or does not exist]"
-        show_log_scrollable_dialog(content, title)
+        import asyncio
+        asyncio.run(show_log_scrollable_dialog(content, title, log_path=log_path))
 
 
-def show_log_scrollable_dialog(content: str, title: str):
+import asyncio
+
+async def show_log_scrollable_dialog(content: str, title: str, log_path=None):
     # Set up TextArea for scrolling the content
     from prompt_toolkit.styles import Style
     style = Style.from_dict({'dialog': 'bg:#1d2230', 'dialog.body': 'bg:#181b29', 'dialog shadow': 'bg:#000000'})
@@ -64,6 +67,37 @@ def show_log_scrollable_dialog(content: str, title: str):
         buttons=[],
         with_background=True
     )
+
+    # Background log watcher
+    async def poll_log():
+        import os
+        import time
+        prev_content = log_textarea.text
+        prev_stat = os.stat(log_path) if log_path and os.path.exists(log_path) else None
+        while True:
+            await asyncio.sleep(0.5)
+            try:
+                stat = os.stat(log_path) if log_path and os.path.exists(log_path) else None
+                if not stat:
+                    continue
+                if prev_stat and stat.st_mtime == prev_stat.st_mtime and stat.st_size == prev_stat.st_size:
+                    continue
+                if log_path:
+                    with open(log_path, 'r') as f:
+                        new_content = f.read()
+                else:
+                    continue
+                new_content = ANSI_ESCAPE.sub('', new_content)
+                if new_content != prev_content:
+                    user_was_at_end = (log_textarea.buffer.cursor_position == len(prev_content))
+                    log_textarea.text = new_content
+                    prev_content = new_content
+                    prev_stat = stat
+                    if user_was_at_end:
+                        log_textarea.buffer.cursor_position = len(new_content)
+            except Exception:
+                pass
+    
     app = Application(
         layout=Layout(dialog),
         key_bindings=kb,
@@ -71,7 +105,11 @@ def show_log_scrollable_dialog(content: str, title: str):
         mouse_support=True,
         full_screen=True
     )
-    app.run()
+    # Launch the file watcher if a log_path is given
+    if log_path:
+        app.create_background_task(poll_log())
+    await app.run_async()
+
 
 
 class MenuApp:
