@@ -1,18 +1,26 @@
 import os
 import time
 import pytest
+import socket
 from menu import menu_core
 from mcp_grok.config import config
 
+def get_free_port():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('', 0))
+        return s.getsockname()[1]
 
-@pytest.fixture
+FREE_PORT = get_free_port()
+config.port = FREE_PORT  # Dynamically select a free port for this test module
+
+
+@pytest.fixture(scope="module")
 def start_stop_server():
     """
     Fixture to start/stop the server process for tests.
     Returns the process object.
     """
-    TEST_PORT = 8099
-    proc = menu_core.server_manager.start_server(port=TEST_PORT)
+    proc = menu_core.server_manager.start_server(port=FREE_PORT)
     yield proc
     if proc is not None:
         menu_core.server_manager.stop_server()
@@ -42,28 +50,30 @@ def wait_for_log(log_file, timeout=10.0, poll_interval=0.2):
 
 
 def test_server_log(start_stop_server):
-    proc = start_stop_server
-    # If proc is None, server is already running; just check log exists and is nonempty
-    if proc is None:
-        if not os.path.exists(config.mcp_shell_log):
-            pytest.fail("Server is already running but mcp_server.log does not exist under this CWD; skipping log file check.")
-        with open(config.mcp_shell_log, "r") as f:
-            assert f.read().strip(), "Log file is empty even though server is running."
-    else:
-        wait_for_log(config.mcp_shell_log, timeout=10.0)  # usually instant, but waits up to 10s
+    import time
+    t0 = time.perf_counter()
+    # Always wait for the log up to 10 seconds, regardless of server status
+    wait_for_log(config.mcp_shell_log, timeout=10.0)
+    print(f"test_server_log duration: {time.perf_counter() - t0:.4f}s")
 
 
 def test_proxy_log(start_stop_proxy):
+    import time
+    t0 = time.perf_counter()
     wait_for_log(config.proxy_log, timeout=30.0)
+    print(f"test_proxy_log duration: {time.perf_counter() - t0:.4f}s")
 
 
 def test_clear_mcp_log():
+    import time
+    t0 = time.perf_counter()
     # Write something, then clear
     with open(config.mcp_shell_log, 'w') as f:
         f.write('some text\n')
     menu_core.clear_log(config.mcp_shell_log)
     with open(config.mcp_shell_log, 'r') as f:
         assert f.read() == '', "MCP log not cleared"
+    print(f"test_clear_mcp_log duration: {time.perf_counter() - t0:.4f}s")
 
 
 
@@ -114,6 +124,8 @@ def test_proxy_log_config_error(start_stop_proxy):
 
 
 def test_server_exits_on_bad_config():
+    import time
+    t0 = time.perf_counter()
     """
     Ensure server process dies quickly and cleanly if started with a bad port or config.
     """
@@ -131,6 +143,7 @@ def test_server_exits_on_bad_config():
         assert proc.poll() is not None, "Server did not exit with bad config (port 1)!"
     finally:
         menu_core.server_manager.stop_server()
+    print(f"test_server_exits_on_bad_config duration: {time.perf_counter() - t0:.4f}s")
 
 import socket
 
@@ -145,19 +158,19 @@ def wait_for_port(port, timeout=5.0, poll_interval=0.05):
             time.sleep(poll_interval)
     return False
 
-def test_server_listens_on_specified_port():
+def test_server_listens_on_specified_port(start_stop_server):
+    import time
+    t0 = time.perf_counter()
     """Test that after launching, the server listens on the specified port."""
-    TEST_PORT = 8108  # Should be a free port for test runs!
-    proc = menu_core.server_manager.start_server(port=TEST_PORT)
-    assert proc is not None, "start_server did not return a process object"
-    try:
-        port_ready = wait_for_port(TEST_PORT, timeout=5.0)
-        assert port_ready, f"Server did not listen on port {TEST_PORT} in time"
-    finally:
-        menu_core.server_manager.stop_server()
+    port_ready = wait_for_port(FREE_PORT, timeout=5.0)
+    assert port_ready, f"Server did not listen on port {FREE_PORT} in time"
+    print(f"test_server_listens_on_specified_port duration: {time.perf_counter() - t0:.4f}s")
 
 def test_start_server_runs_and_stops():
-    TEST_PORT = 8099
+    import time
+    t0 = time.perf_counter()
+    # This test still uses a separate port for isolation
+    TEST_PORT = get_free_port()
     proc = menu_core.server_manager.start_server(port=TEST_PORT)
     assert proc is not None, "start_server did not return a process object"
     try:
@@ -165,3 +178,4 @@ def test_start_server_runs_and_stops():
     finally:
         menu_core.server_manager.stop_server()
         assert proc.poll() is not None, "Server process did not stop after stop_server called"
+    print(f"test_start_server_runs_and_stops duration: {time.perf_counter() - t0:.4f}s")
