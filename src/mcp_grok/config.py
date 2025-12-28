@@ -32,16 +32,16 @@ class Config:
             self.log_timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
     @property
-    def mcp_server_log(self):
-        return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_{self.port}_mcp_server.log')
+    def mcp_shell_log(self):
+        return os.path.expanduser(f'~/.mcp-grok/mcp-shell_{self.log_timestamp}_{self.port}.log')
 
     @property
     def proxy_log(self):
-        return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_{self.port}_superassistant_proxy.log')
+        return os.path.expanduser(f'~/.mcp-grok/proxy_{self.log_timestamp}_{self.port}.log')
 
     @property
     def server_audit_log(self):
-        return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_{self.port}_server_audit.log')
+        return os.path.expanduser(f'~/.mcp-grok/audit_{self.log_timestamp}_{self.port}.log')
 
 
 # The canonical singleton Config instance for codebase-wide import

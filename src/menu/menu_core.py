@@ -41,7 +41,7 @@ class ServerManager:
             # Server is not running
             pass
 
-        log = open(config.mcp_server_log, "a")
+        log = open(config.mcp_shell_log, "a")
         proc = subprocess.Popen(
             ['mcp-grok-server', '--port', str(port)],
             stdout=log,

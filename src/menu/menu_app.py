@@ -50,8 +50,8 @@ class MenuApp:
         else:
             items.append(('proxy', 'Run SuperAssistant Proxy'))
         items += [
-            ('logs_mcp', 'View MCP Server Logs'),
-            ('clear_logs_mcp', 'Clear MCP Server Log'),
+            ('logs_mcp', 'View MCP Shell Logs'),
+            ('clear_logs_mcp', 'Clear MCP Shell Log'),
             ('logs_proxy', 'View SuperAssistant Proxy Logs'),
             ('clear_logs_proxy', 'Clear Proxy Log'),
             ('vscode', 'Run VSCode'),
@@ -176,9 +176,9 @@ class MenuApp:
 
     def _handle_log_action(self, value: Optional[str]) -> bool:
         if value == 'logs_mcp':
-            show_log(config.mcp_server_log, "MCP Server Logs (tail)")
+            show_log(config.mcp_shell_log, "MCP Shell Logs (tail)")
         elif value == 'clear_logs_mcp':
-            show_log(config.mcp_server_log, "MCP Server Log", clear=True)
+            show_log(config.mcp_shell_log, "MCP Shell Log", clear=True)
         elif value == 'logs_proxy':
             show_log(config.proxy_log, "SuperAssistant Proxy Logs (tail)")
         elif value == 'clear_logs_proxy':

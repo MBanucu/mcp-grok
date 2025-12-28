@@ -35,7 +35,7 @@ def handle_stop_proxy(state):
 
 
 def handle_show_mcp_logs():
-    content = menu_core.log_content(config.mcp_server_log)
+    content = menu_core.log_content(config.mcp_shell_log)
     if content:
         print(ANSI_ESCAPE.sub('', content[-1000:]))
     else:
@@ -44,8 +44,8 @@ def handle_show_mcp_logs():
 
 
 def handle_clear_mcp_logs():
-    menu_core.clear_log(config.mcp_server_log)
-    print("MCP Server log cleared.")
+    menu_core.clear_log(config.mcp_shell_log)
+    print("MCP Shell log cleared.")
     return True
 
 
@@ -119,11 +119,11 @@ def main():
     )
     group.add_argument(
         '--show-mcp-logs', action='store_true',
-        help='Show MCP Server logs (tail)'
+        help='Show MCP Shell logs (tail)'
     )
     group.add_argument(
         '--clear-mcp-logs', action='store_true',
-        help='Clear the MCP Server log'
+        help='Clear the MCP Shell log'
     )
     group.add_argument(
         '--show-proxy-logs', action='store_true',
