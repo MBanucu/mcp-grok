@@ -30,6 +30,16 @@ logging.basicConfig(
     ]
 )
 
+# Suppress noisy anyio.ClosedResourceError from logs
+def _suppress_closed_resource_error(record):
+    msg = record.getMessage()
+    if "ClosedResourceError" in msg:
+        return False
+    exc = getattr(record, "exc_info", None)
+    if exc and exc[0] and "ClosedResourceError" in str(exc[0]):
+        return False
+    return True
+logging.getLogger().addFilter(_suppress_closed_resource_error)
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +63,10 @@ def ensure_projects_dir():
     os.makedirs(config.projects_dir, exist_ok=True)
 
 
+import functools
+
 def log_tool_call(func):
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         logger.info(f"Tool called: {func.__name__} args={args} kwargs={kwargs}")
         return func(*args, **kwargs)
