@@ -45,12 +45,12 @@ def test_server_log(start_stop_server):
     proc = start_stop_server
     # If proc is None, server is already running; just check log exists and is nonempty
     if proc is None:
-        if not os.path.exists(config.mcp_server_log):
+        if not os.path.exists(config.mcp_shell_log):
             pytest.fail("Server is already running but mcp_server.log does not exist under this CWD; skipping log file check.")
-        with open(config.mcp_server_log, "r") as f:
+        with open(config.mcp_shell_log, "r") as f:
             assert f.read().strip(), "Log file is empty even though server is running."
     else:
-        wait_for_log(config.mcp_server_log, timeout=10.0)  # usually instant, but waits up to 10s
+        wait_for_log(config.mcp_shell_log, timeout=10.0)  # usually instant, but waits up to 10s
 
 
 def test_proxy_log(start_stop_proxy):
@@ -59,10 +59,10 @@ def test_proxy_log(start_stop_proxy):
 
 def test_clear_mcp_log():
     # Write something, then clear
-    with open(config.mcp_server_log, 'w') as f:
+    with open(config.mcp_shell_log, 'w') as f:
         f.write('some text\n')
-    menu_core.clear_log(config.mcp_server_log)
-    with open(config.mcp_server_log, 'r') as f:
+    menu_core.clear_log(config.mcp_shell_log)
+    with open(config.mcp_shell_log, 'r') as f:
         assert f.read() == '', "MCP log not cleared"
 
 
