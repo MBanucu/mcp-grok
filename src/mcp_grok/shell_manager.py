@@ -2,10 +2,11 @@ import subprocess
 import threading
 import time
 import logging
+import os
+import signal
 from .config import Config
 
 
-logger = logging.getLogger(__name__)
 
 
 class ShellManager:
@@ -36,14 +37,23 @@ class ShellManager:
                     stderr=subprocess.STDOUT,
                     cwd=cwd,
                     text=True,
-                    bufsize=1
+                    bufsize=1,
+                    start_new_session=True  # Start in new session/process group for safe kill
                 )
+                # Log PGID of child to verify isolation
+                try:
+                    child_pgid = os.getpgid(proc.pid)
+                    logging.getLogger(__name__).info(
+                        f"Shell started with PID={proc.pid}, PGID={child_pgid} (cwd={cwd!r})"
+                    )
+                except Exception as e:
+                    logging.getLogger(__name__).warning(f"Could not get PGID for shell PID={proc.pid}: {e}")
                 # Ensure login shell is in correct directory
                 if proc.stdin is not None:
                     proc.stdin.write(f'cd "{cwd}"\n')
                     proc.stdin.flush()
             except Exception as e:
-                logger.error(
+                logging.getLogger(__name__).error(
                     "Exception in start_shell (cwd=%r): %s: %s",
                     cwd, type(e).__name__, e,
                     exc_info=True
@@ -57,26 +67,63 @@ class ShellManager:
             self._shell = proc
             pid = getattr(proc, 'pid', None)
             poll_status = proc.poll()
-            logger.info(
+            logging.getLogger(__name__).info(
                 "Started clean shell in %r with PID=%s, initial poll()=%s",
                 cwd,
                 pid,
                 poll_status
             )
             if poll_status is not None:
-                logger.warning(
+                logging.getLogger(__name__).warning(
                     f"Shell process for {cwd!r} exited immediately with "
                     f"poll()={poll_status!r}, returncode={proc.returncode!r}"
                 )
             return f"Started shell for project: {cwd}"
 
-    def stop_shell(self):
+    def stop_shell(self, timeout=4):
         with self._shell_lock:
             if self._shell is not None and self._shell.poll() is None:
-                self._shell.kill()
+                # 1. Try a graceful "exit"
+                # try:
+                # Graceful shell exit attempt by sending 'exit' to shell
+                # Skipped graceful exit via 'exit' command to shell; go directly to SIGTERM/SIGKILL
+
+
+                # 2. Try SIGTERM for normal shutdown
+                pgid = None
+                try:
+                    try:
+                        pgid = os.getpgid(self._shell.pid)
+                    except Exception:
+                        pass
+                    if pgid:
+                        os.killpg(pgid, signal.SIGTERM)
+                    else:
+                        os.kill(self._shell.pid, signal.SIGTERM)
+                    logging.getLogger(__name__).info(f"Sent SIGTERM to shell (pid={self._shell.pid})")
+                except Exception as te:
+                    logging.getLogger(__name__).warning(f"Failed to send SIGTERM: {te!r}")
+
+                # 3. Wait up to timeout seconds for graceful shutdown
+                try:
+                    self._shell.wait(timeout=timeout)
+                    logging.getLogger(__name__).info(f"Shell (pid={self._shell.pid}) exited gracefully after SIGTERM.")
+                except Exception:
+                    # 4. If not gone, escalate to SIGKILL
+                    try:
+                        if pgid:
+                            os.killpg(pgid, signal.SIGKILL)
+                        else:
+                            os.kill(self._shell.pid, signal.SIGKILL)
+                        self._shell.wait(timeout=1)
+                        logging.getLogger(__name__).warning(f"Had to SIGKILL shell (pid={self._shell.pid}).")
+                    except Exception as ke:
+                        logging.getLogger(__name__).error(f"Failed to SIGKILL shell (pid={self._shell.pid}): {ke!r}")
+            else:
+                logging.getLogger(__name__).info("Shell was already stopped.")
             self._shell = None
             self._cwd = None
-            logger.info("Stopped shell")
+            logging.getLogger(__name__).info("Stopped shell")
 
     def _get_shell_pipes(self, proc):
         if not proc:
@@ -103,14 +150,14 @@ class ShellManager:
             if line.rstrip() == "__MCP_END__":  # Output delimiter
                 break
             out_lines.append(line)
-            if time.time() - t0 > 180:
+            if time.time() - t0 > 300:
                 return None, "Error: Shell command timed out."
         return "".join(out_lines).strip(), None
 
     def execute(self, command: str) -> str:
         with self._shell_lock:
             if not self.is_active():
-                logger.error(
+                logging.getLogger(__name__).error(
                     "Session shell not active when attempting to execute "
                     "command. _shell=%r, _cwd=%r, poll=%r",
                     self._shell,
@@ -146,7 +193,7 @@ class ShellManager:
                     out[:8192] +
                     "\n...[output truncated]..."
                 )  # Truncate long output
-            logger.info(
+            logging.getLogger(__name__).info(
                 "SessionShell[dir=%s] cmd %r output %d bytes",
                 self._cwd, command, len(out)
             )
