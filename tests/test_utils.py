@@ -5,6 +5,16 @@ import requests
 # High-level API for test code (one abstraction each)
 # =========================
 
+def api_change_active_project(server_url, project_name):
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 9821,
+        "method": "tools/call",
+        "params": {"name": "change_active_project", "arguments": {"project_name": project_name}},
+    }
+    resp = requests.post(server_url, json=payload, headers=_json_headers())
+    assert resp.status_code == 200, f"Failed to change project: {resp.text}"
+
 def mcp_create_project(server_url, project_name):
     """Create project via MCP API (asserts creation and presence on disk)."""
     payload = _build_create_project_payload(project_name)
