@@ -79,7 +79,7 @@ class MenuApp:
             menu_items = self.get_menu_items()
             selected = {'value': None}
             buttons = self.build_buttons(menu_items, selected)
-            btn_container = HSplit(buttons, padding=1)
+            btn_container = HSplit(buttons, padding=0)
             dialog = Dialog(
                 title='MCP Project Dev Menu',
                 body=HSplit([
