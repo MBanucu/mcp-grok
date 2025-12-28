@@ -1,5 +1,5 @@
 import logging
-from .config import Config
+from .config import config
 from .shell_manager import ShellManager
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
@@ -7,7 +7,6 @@ from mcp.types import ToolAnnotations
 from typing import Optional
 from .file_tools import read_file as file_tools_read_file, write_file as file_tools_write_file
 
-config = Config()
 
 import os
 # Ensure log directory exists and is writable, or fallback to /tmp

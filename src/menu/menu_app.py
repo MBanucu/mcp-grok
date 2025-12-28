@@ -8,8 +8,7 @@ from prompt_toolkit.widgets import Button, Dialog, Label
 from prompt_toolkit.layout.containers import WindowAlign
 from prompt_toolkit.key_binding import KeyBindings
 from . import menu_core
-from mcp_grok.config import Config
-config = Config()
+from mcp_grok.config import config
 from .menu_state import MenuState
 
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")

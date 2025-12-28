@@ -2,8 +2,7 @@ import os
 import time
 import pytest
 from menu import menu_core
-from mcp_grok.config import Config
-config = Config()
+from mcp_grok.config import config
 
 
 @pytest.fixture(autouse=True)

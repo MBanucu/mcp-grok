@@ -5,8 +5,7 @@ import os
 from .menu_state import MenuState
 from .menu_app import MenuApp
 from . import menu_core
-from mcp_grok.config import Config
-config = Config()
+from mcp_grok.config import config
 
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 

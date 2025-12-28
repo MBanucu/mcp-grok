@@ -2,8 +2,7 @@ import os
 import subprocess
 import socket
 
-from mcp_grok.config import Config
-config = Config()
+from mcp_grok.config import config
 
 def _writable_logfile(preferred):
     logdir = os.path.dirname(preferred)
