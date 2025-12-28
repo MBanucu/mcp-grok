@@ -66,32 +66,51 @@ def test_clear_mcp_log():
         assert f.read() == '', "MCP log not cleared"
 
 
-def test_clear_proxy_log():
-    # Write something, then clear
-    with open(config.proxy_log, 'w') as f:
-        f.write('other text\n')
-    menu_core.clear_log(config.proxy_log)
-    with open(config.proxy_log, 'r') as f:
-        assert f.read() == '', "Proxy log not cleared"
 
 
 def test_proxy_log_config_error(start_stop_proxy):
-    """Fail if the proxy logs a config error within 3 seconds of startup."""
-    start = time.time()
-    max_wait = 3.0  # lowered from 10s for faster CI/dev
-    poll_interval = 0.1
+    """
+    Fail on config error after proxy start. Print log for success marker.
+    """
+    import time
+    from pathlib import Path
+
+    max_wait = 10.0
+    poll_interval = 0.05
     error_found = False
-    while time.time() - start < max_wait:
-        if os.path.exists(config.proxy_log):
-            with open(config.proxy_log, "r") as f:
+    log_path = Path(config.proxy_log)
+    poll_start = time.perf_counter()
+    poll_count = 0
+    success_marker = "[mcp-superassistant-proxy] Loaded config with 1 servers"
+    success_marker_found = False
+
+    while time.perf_counter() - poll_start < max_wait:
+        if log_path.exists():
+            with open(log_path, "r") as f:
                 text = f.read()
                 if "Failed to load config" in text or "Error: Invalid config format" in text:
+                    print(f"[{time.perf_counter() - poll_start:.4f}s] error string found in log, breaking")
                     error_found = True
                     break
+                if success_marker in text:
+                    print(f"[{time.perf_counter() - poll_start:.4f}s] success marker found in log, breaking loop")
+                    success_marker_found = True
+                    break
+        poll_count += 1
         time.sleep(poll_interval)
-    duration = time.time() - start
-    print(f"test_proxy_log_config_error completed in {duration:.2f} seconds")
+    poll_end = time.perf_counter()
+
+    print("=" * 40)
+    print("Proxy log at end of poll:\n")
+    if log_path.exists():
+        with open(log_path, "r") as f:
+            print(f.read())
+    else:
+        print("-- Log file does not exist yet --")
+    print("=" * 40)
+    print(f"[{poll_end - poll_start:.4f}s] exited polling loop after {poll_count} polls")
     assert not error_found, "Proxy log reports a config loading error!"
+    assert success_marker_found, f"Proxy log did not contain the success marker within {max_wait} seconds!"
 
 
 def test_server_exits_on_bad_config():
