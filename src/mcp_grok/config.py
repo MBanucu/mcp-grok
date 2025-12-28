@@ -33,15 +33,15 @@ class Config:
 
     @property
     def mcp_server_log(self):
-        return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_mcp_server.log')
+        return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_{self.port}_mcp_server.log')
 
     @property
     def proxy_log(self):
-        return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_superassistant_proxy.log')
+        return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_{self.port}_superassistant_proxy.log')
 
     @property
     def server_audit_log(self):
-        return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_server_audit.log')
+        return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_{self.port}_server_audit.log')
 
 # The canonical singleton Config instance for codebase-wide import
 config = Config()
