@@ -12,7 +12,7 @@
     {
       packages.${system}.default = pkgs.python312Packages.buildPythonApplication {
         pname = "mcp-grok";
-        version = "0.1.4";
+        # version = "0.1.4";
         src = ./.;
         format = "pyproject";
         propagatedBuildInputs = [
