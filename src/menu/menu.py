@@ -2,7 +2,6 @@ import re
 import sys
 import argparse
 import os
-from typing import Any
 from .menu_state import MenuState
 from .menu_app import MenuApp
 from . import menu_core

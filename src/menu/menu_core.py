@@ -41,7 +41,7 @@ class ServerManager:
             # Server is not running
             pass
 
-        log = open(config.mcp_shell_log, "a")
+        log = open(_writable_logfile(config.mcp_shell_log), "a")
         proc = subprocess.Popen(
             ['mcp-grok-server', '--port', str(port)],
             stdout=log,
@@ -68,7 +68,7 @@ server_manager = ServerManager()
 
 
 def start_proxy():
-    log = open(config.proxy_log, "a")
+    log = open(_writable_logfile(config.proxy_log), "a")
     proc = subprocess.Popen(
         ['superassistant-proxy'],
         stdin=subprocess.DEVNULL,
