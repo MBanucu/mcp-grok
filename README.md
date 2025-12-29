@@ -178,6 +178,11 @@ You can add this project as an input to your own flake-based Python/Nix project:
 
 If not using flakes, you can still use this project's `default.nix` as an overlay.
 Example for configuration.nix:
+
+> **Important:**
+> When enabling experimental features/flakes for the first time:
+> You must **comment out** the `environment.systemPackages = with pkgs; [ mcp-grok ];` line below for your initial rebuild, as Nix will not be aware of mcp-grok until after flakes are established. Uncomment it only after the first successful `nixos-rebuild` with flakes enabled, or you will get a build error.
+
 ```nix
 { config, pkgs, ... }:
 
@@ -198,13 +203,13 @@ Example for configuration.nix:
     )
   ];
 
+  # Comment out the lines below for your initial rebuild before enabling flakes
   environment.systemPackages = with pkgs; [
     mcp-grok
   ];
+  # Uncomment them after the first successful nixos-rebuild with flakes enabled
 }
 ```
-
-Add to NIX_PATH overlays or use in your legacy Nix expressions.
 
 > The provided `default.nix` forwards transparently to the flake package for maximal compatibility as an overlay or with legacy `nix-build`.
 
