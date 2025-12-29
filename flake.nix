@@ -45,6 +45,7 @@
             pkgs.pyright
             pkgs.python312Packages.requests
             pkgs.git
+            pkgs.gh
           ];
           inputsFrom = [ self.packages.${system}.default ];
           shellHook = ''
@@ -62,6 +63,7 @@
             pkgs.pyright
             pkgs.python312Packages.requests
             pkgs.git
+            pkgs.gh
           ];
           inputsFrom = [ self.packages.${system}.default ];
           shellHook = ''
