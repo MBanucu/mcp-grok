@@ -7,8 +7,6 @@ import signal
 from .config import Config
 
 
-
-
 class ShellManager:
     def __init__(self, cfg: Config):
         self.cfg = cfg
@@ -80,45 +78,62 @@ class ShellManager:
                 )
             return f"Started shell for project: {cwd}"
 
+    def _get_shell_pgid(self):
+        proc = self._shell
+        if not proc:
+            return None
+        try:
+            return os.getpgid(proc.pid)
+        except Exception:
+            return None
+
+    def _send_signal(self, pgid, sig):
+        proc = self._shell
+        if not proc:
+            logging.getLogger(__name__).warning("No shell process to signal")
+            return False
+        try:
+            if pgid:
+                os.killpg(pgid, sig)
+            else:
+                os.kill(proc.pid, sig)
+            return True
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Failed to send signal {sig!r}: {e!r}")
+            return False
+
+    def _wait_for_termination(self, timeout):
+        proc = self._shell
+        if not proc:
+            return True
+        try:
+            proc.wait(timeout=timeout)
+            logging.getLogger(__name__).info(f"Shell (pid={proc.pid}) exited gracefully after SIGTERM.")
+            return True
+        except Exception:
+            return False
+
     def stop_shell(self, timeout=4):
         with self._shell_lock:
             if self._shell is not None and self._shell.poll() is None:
-                # 1. Try a graceful "exit"
-                # try:
-                # Graceful shell exit attempt by sending 'exit' to shell
-                # Skipped graceful exit via 'exit' command to shell; go directly to SIGTERM/SIGKILL
+                # Skipping graceful 'exit' command; proceed straight to SIGTERM/SIGKILL
+                pgid = self._get_shell_pgid()
 
-
-                # 2. Try SIGTERM for normal shutdown
-                pgid = None
-                try:
-                    try:
-                        pgid = os.getpgid(self._shell.pid)
-                    except Exception:
-                        pass
-                    if pgid:
-                        os.killpg(pgid, signal.SIGTERM)
-                    else:
-                        os.kill(self._shell.pid, signal.SIGTERM)
+                # 1) Try SIGTERM
+                sent = self._send_signal(pgid, signal.SIGTERM)
+                if sent:
                     logging.getLogger(__name__).info(f"Sent SIGTERM to shell (pid={self._shell.pid})")
-                except Exception as te:
-                    logging.getLogger(__name__).warning(f"Failed to send SIGTERM: {te!r}")
 
-                # 3. Wait up to timeout seconds for graceful shutdown
-                try:
-                    self._shell.wait(timeout=timeout)
-                    logging.getLogger(__name__).info(f"Shell (pid={self._shell.pid}) exited gracefully after SIGTERM.")
-                except Exception:
-                    # 4. If not gone, escalate to SIGKILL
-                    try:
-                        if pgid:
-                            os.killpg(pgid, signal.SIGKILL)
-                        else:
-                            os.kill(self._shell.pid, signal.SIGKILL)
-                        self._shell.wait(timeout=1)
-                        logging.getLogger(__name__).warning(f"Had to SIGKILL shell (pid={self._shell.pid}).")
-                    except Exception as ke:
-                        logging.getLogger(__name__).error(f"Failed to SIGKILL shell (pid={self._shell.pid}): {ke!r}")
+                # 2) Wait for graceful shutdown
+                if not self._wait_for_termination(timeout=timeout):
+                    # 3) Escalate to SIGKILL
+                    killed = self._send_signal(pgid, signal.SIGKILL)
+                    if killed:
+                        try:
+                            self._shell.wait(timeout=1)
+                            logging.getLogger(__name__).warning(f"Had to SIGKILL shell (pid={self._shell.pid}).")
+                        except Exception as ke:
+                            logging.getLogger(__name__).error(f"Failed to SIGKILL shell (pid={self._shell.pid}): {ke!r}")
             else:
                 logging.getLogger(__name__).info("Shell was already stopped.")
             self._shell = None
