@@ -24,19 +24,11 @@
           pip
           pkgs.makeWrapper
         ];
-        installPhase = ''
-          runHook preInstall
-          ${pkgs.python312Packages.pip}/bin/pip install . --prefix=$out --no-build-isolation --no-deps
+        postInstall = ''
           mkdir -p $out/bin
-          cp ./bin/mcp-grok-server $out/bin/mcp-grok-server
-          chmod +x $out/bin/mcp-grok-server
-          cp ./bin/superassistant-proxy $out/bin/superassistant-proxy
+          cp $src/bin/superassistant-proxy $out/bin/superassistant-proxy
           chmod +x $out/bin/superassistant-proxy
-          cp ./bin/config.json $out/bin/config.json
-          wrapProgram $out/bin/mcp-grok-menu --prefix PYTHONPATH : $out/${pkgs.python312.sitePackages}
-          wrapProgram $out/bin/mcp-grok-server --prefix PYTHONPATH : $out/${pkgs.python312.sitePackages}
-          wrapProgram $out/bin/superassistant-proxy --prefix PYTHONPATH : $out/${pkgs.python312.sitePackages}
-          runHook postInstall
+          cp $src/bin/config.json $out/bin/config.json
         '';
         meta = with pkgs.lib; {
           description = "FastMCP-based persistent project shell and API server (mcp-grok-server)";
