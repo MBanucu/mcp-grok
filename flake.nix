@@ -23,7 +23,6 @@
           setuptools
           wheel
           pip
-          pkgs.makeWrapper
         ];
         postInstall = ''
           mkdir -p $out/bin
