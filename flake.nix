@@ -12,7 +12,7 @@
     {
       packages.${system}.default = pkgs.python312Packages.buildPythonApplication {
         pname = "mcp-grok";
-        version = "0.1.3";
+        version = "0.1.4";
         src = ./.;
         format = "pyproject";
         propagatedBuildInputs = [
@@ -31,6 +31,7 @@
           cp ./bin/superassistant-proxy $out/bin/superassistant-proxy
           chmod +x $out/bin/superassistant-proxy
           cp ./bin/config.json $out/bin/config.json
+          wrapProgram $out/bin/mcp-grok-menu --prefix PYTHONPATH : $out/${pkgs.python312.sitePackages}
           runHook postInstall
         '';
         meta = with pkgs.lib; {
