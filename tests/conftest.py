@@ -3,6 +3,8 @@ import pytest
 
 import socket
 
+from mcp_grok.config import config
+
 
 def pick_free_port():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -69,6 +71,19 @@ def teardown_mcp_server(server_proc):
         server_proc.stdout.close()
     if os.path.exists(DEV_ROOT):
         shutil.rmtree(DEV_ROOT)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ensure_log_dirs():
+    """Ensure parent directories for configured log files exist for tests."""
+    try:
+        os.makedirs(os.path.dirname(config.mcp_shell_log), exist_ok=True)
+    except Exception:
+        pass
+    try:
+        os.makedirs(os.path.dirname(config.proxy_log), exist_ok=True)
+    except Exception:
+        pass
 
 
 @pytest.fixture(scope="session")
