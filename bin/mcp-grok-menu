@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-# Wrapper to launch the MCP project management menu via uv and python
-exec python -m menu.menu "$@"
