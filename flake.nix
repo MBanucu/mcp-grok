@@ -46,6 +46,8 @@
             pkgs.python312Packages.requests
             pkgs.git
             pkgs.gh
+            pkgs.jq
+            pkgs.unzip
           ];
           inputsFrom = [ self.packages.${system}.default ];
           shellHook = ''
@@ -64,6 +66,8 @@
             pkgs.python312Packages.requests
             pkgs.git
             pkgs.gh
+            pkgs.jq
+            pkgs.unzip
           ];
           inputsFrom = [ self.packages.${system}.default ];
           shellHook = ''
