@@ -1,8 +1,6 @@
 {
   description = "MCP-Grok: Persistent project shell and API server";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
-
   outputs =
     { self, nixpkgs }:
     let
