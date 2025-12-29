@@ -5,10 +5,12 @@ import socket
 from menu import menu_core
 from mcp_grok.config import config
 
+
 def get_free_port():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(('', 0))
         return s.getsockname()[1]
+
 
 FREE_PORT = get_free_port()
 config.port = FREE_PORT  # Dynamically select a free port for this test module
@@ -56,9 +58,6 @@ def test_server_log(start_stop_server):
 
 def test_proxy_log(start_stop_proxy):
     wait_for_log(config.proxy_log, timeout=30.0)
-
-
-
 
 
 def test_proxy_log_config_error(start_stop_proxy):
@@ -110,7 +109,6 @@ def test_server_exits_on_bad_config():
     finally:
         menu_core.server_manager.stop_server()
 
-import socket
 
 def wait_for_port(port, timeout=5.0, poll_interval=0.05):
     """Wait up to timeout seconds for a TCP port to be open on localhost."""
@@ -123,10 +121,12 @@ def wait_for_port(port, timeout=5.0, poll_interval=0.05):
             time.sleep(poll_interval)
     return False
 
+
 def test_server_listens_on_specified_port(start_stop_server):
     """Test that after launching, the server listens on the specified port."""
     port_ready = wait_for_port(FREE_PORT, timeout=5.0)
     assert port_ready, f"Server did not listen on port {FREE_PORT} in time"
+
 
 def test_start_server_runs_and_stops():
     # This test still uses a separate port for isolation
