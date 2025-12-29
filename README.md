@@ -176,15 +176,31 @@ You can add this project as an input to your own flake-based Python/Nix project:
 
 ### Overlay / Legacy usage
 
-If not using flakes, you can still use this project's `default.nix` as an overlay:
-
+If not using flakes, you can still use this project's `default.nix` as an overlay.
+Example for configuration.nix:
 ```nix
-# overlay.nix
-self: super: {
-  mcp-grok = import (builtins.fetchGit {
-    url = "https://github.com/MBanucu/mcp-grok.git";
-    # Optionally specify rev and sha256
-  });
+{ config, pkgs, ... }:
+
+{
+  nix.settings.experimental-features = [
+    "nix-command"
+    "flakes"
+  ];
+
+  nixpkgs.overlays = [
+    (
+      self: super:
+      {
+        mcp-grok = import (builtins.fetchGit {
+          url = "https://github.com/MBanucu/mcp-grok.git";
+        });
+      }
+    )
+  ];
+
+  environment.systemPackages = with pkgs; [
+    mcp-grok
+  ];
 }
 ```
 
