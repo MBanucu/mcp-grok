@@ -22,6 +22,7 @@
           setuptools
           wheel
           pip
+          pkgs.makeWrapper
         ];
         installPhase = ''
           runHook preInstall
