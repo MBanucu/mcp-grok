@@ -29,6 +29,9 @@
           cp $src/bin/superassistant-proxy $out/bin/superassistant-proxy
           chmod +x $out/bin/superassistant-proxy
           cp $src/bin/config.json $out/bin/config.json
+          wrapProgram $out/bin/mcp-grok-menu --prefix PYTHONPATH : $out/${pkgs.python312.sitePackages}
+          wrapProgram $out/bin/mcp-grok-server --prefix PYTHONPATH : $out/${pkgs.python312.sitePackages}
+          wrapProgram $out/bin/superassistant-proxy --prefix PYTHONPATH : $out/${pkgs.python312.sitePackages}
         '';
         meta = with pkgs.lib; {
           description = "FastMCP-based persistent project shell and API server (mcp-grok-server)";
