@@ -1,15 +1,13 @@
 import os
 import re
 from typing import Optional
+import asyncio
 from prompt_toolkit.shortcuts import message_dialog
 from prompt_toolkit.application import Application
 from prompt_toolkit.layout import Layout, HSplit
 from prompt_toolkit.widgets import Button, Dialog, Label, TextArea
 from prompt_toolkit.layout.containers import WindowAlign
 from prompt_toolkit.key_binding import KeyBindings
-from prompt_toolkit.layout.containers import Window
-from prompt_toolkit.layout.controls import FormattedTextControl
-from prompt_toolkit.buffer import Buffer
 from . import menu_core
 from mcp_grok.config import config
 from .menu_state import MenuState
@@ -34,11 +32,38 @@ def show_log(log_path: str, title: str, clear: bool = False) -> None:
         asyncio.run(show_log_scrollable_dialog(content, title, log_path=log_path))
 
 
-import asyncio
+async def _poll_log(log_path: str, log_textarea: TextArea) -> None:
+    """Background task to poll log file changes and update TextArea."""
+    prev_content = log_textarea.text
+    prev_stat = os.stat(log_path) if log_path and os.path.exists(log_path) else None
+    while True:
+        await asyncio.sleep(0.5)
+        try:
+            stat = os.stat(log_path) if log_path and os.path.exists(log_path) else None
+            if not stat:
+                continue
+            if prev_stat and stat.st_mtime == prev_stat.st_mtime and stat.st_size == prev_stat.st_size:
+                continue
+            with open(log_path, 'r') as f:
+                new_content = f.read()
+            new_content = ANSI_ESCAPE.sub('', new_content)
+            if new_content != prev_content:
+                # Preserve user scroll position if they were at the end
+                user_was_at_end = (log_textarea.buffer.cursor_position == len(prev_content))
+                log_textarea.text = new_content
+                prev_content = new_content
+                prev_stat = stat
+                if user_was_at_end:
+                    log_textarea.buffer.cursor_position = len(new_content)
+        except Exception:
+            # Ignore polling errors; do not crash the UI
+            pass
+
 
 async def show_log_scrollable_dialog(content: str, title: str, log_path=None):
-    # Set up TextArea for scrolling the content
+    """Show a scrollable dialog with log content. Runs in the asyncio loop."""
     from prompt_toolkit.styles import Style
+
     style = Style.from_dict({'dialog': 'bg:#1d2230', 'dialog.body': 'bg:#181b29', 'dialog shadow': 'bg:#000000'})
 
     log_textarea = TextArea(
@@ -47,72 +72,42 @@ async def show_log_scrollable_dialog(content: str, title: str, log_path=None):
         line_numbers=False,
         read_only=True,
         focus_on_click=True,
-        # No width or height specified: will fill available space
     )
     # Move cursor to end for bottom scroll
     log_textarea.buffer.cursor_position = len(log_textarea.text)
 
     kb = KeyBindings()
+
     @kb.add('escape')
     @kb.add('q')
     def close_(event):
         event.app.exit()
-    from prompt_toolkit.widgets import Label
-    from prompt_toolkit.layout import HSplit
+
     header = Label(text=title + ' (Scroll: ↑↓ PgUp/PgDn, q/Esc to close)', style="reverse", dont_extend_height=True)
     footer = Label(
         text="Press ↑, ↓, PgUp, PgDn to scroll; q or Esc to close.",
         style="reverse",
         dont_extend_height=True,
     )
+
     body = HSplit([
         header,
         log_textarea,
         footer,
     ], padding=0)
 
-    # Background log watcher
-    async def poll_log():
-        import os
-        import time
-        prev_content = log_textarea.text
-        prev_stat = os.stat(log_path) if log_path and os.path.exists(log_path) else None
-        while True:
-            await asyncio.sleep(0.5)
-            try:
-                stat = os.stat(log_path) if log_path and os.path.exists(log_path) else None
-                if not stat:
-                    continue
-                if prev_stat and stat.st_mtime == prev_stat.st_mtime and stat.st_size == prev_stat.st_size:
-                    continue
-                if log_path:
-                    with open(log_path, 'r') as f:
-                        new_content = f.read()
-                else:
-                    continue
-                new_content = ANSI_ESCAPE.sub('', new_content)
-                if new_content != prev_content:
-                    user_was_at_end = (log_textarea.buffer.cursor_position == len(prev_content))
-                    log_textarea.text = new_content
-                    prev_content = new_content
-                    prev_stat = stat
-                    if user_was_at_end:
-                        log_textarea.buffer.cursor_position = len(new_content)
-            except Exception:
-                pass
-    
     app = Application(
         layout=Layout(body, focused_element=log_textarea.window),
         key_bindings=kb,
         style=style,
         mouse_support=True,
-        full_screen=True
+        full_screen=True,
     )
-    # Launch the file watcher if a log_path is given
-    if log_path:
-        app.create_background_task(poll_log())
-    await app.run_async()
 
+    if log_path:
+        app.create_background_task(_poll_log(log_path, log_textarea))
+
+    await app.run_async()
 
 
 class MenuApp:
@@ -262,7 +257,8 @@ class MenuApp:
         return True
 
     def _find_latest_audit_log(self):
-        import glob, os
+        import glob
+        import os
         pattern = os.path.expanduser('~/.mcp-grok/*_audit.log')
         candidates = glob.glob(pattern)
         if not candidates:
