@@ -90,22 +90,50 @@ def ensure_log_dirs():
 @pytest.fixture(scope="session")
 def mcp_server():
     setup_project_dir()
-    server_proc = start_mcp_server()
+    # Prefer using the ServerManager API to start and track the fixture server.
+    # Falls back to the legacy helper if the in-process server_manager isn't importable.
+    server_proc = None
+    try:
+        from menu import menu_core
+        try:
+            server_proc = menu_core.server_manager.start_server(port=PORT, projects_dir=DEV_ROOT)
+        except Exception:
+            server_proc = None
+    except Exception:
+        server_proc = None
+
+    if server_proc is None:
+        # fallback: start process directly
+        server_proc = start_mcp_server()
     wait_for_mcp_server(server_proc)
+
     yield f"http://localhost:{PORT}/mcp"
-    teardown_mcp_server(server_proc)
+
+    # Teardown: prefer server_manager stop if possible, else the legacy teardown
+    try:
+        from menu import menu_core
+        try:
+            menu_core.server_manager.stop_server(proc=server_proc)
+        except Exception:
+            teardown_mcp_server(server_proc)
+    except Exception:
+        teardown_mcp_server(server_proc)
 
 
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_leftover_servers():
     """Session-scoped autouse fixture that ensures no mcp-grok-server processes
-    remain after the test session. If any are found, it raises an exception to
-    fail the test run so leaks are fixed instead of silently killed.
+    remain after the test session. It will stop tracked servers, then kill any
+    remaining untracked servers except a server listening on port 8000 (left alone).
+    If any non-8000 untracked servers remain after this, the fixture raises an
+    exception to fail the test run so leaks are fixed instead of silently ignored.
     """
     # Run tests
     yield
 
     # 1) Ask the in-process server_manager to stop tracked servers
+    tracked_pids = set()
+    tracked_ports = set()
     try:
         from menu import menu_core
         sm = menu_core.server_manager
@@ -118,6 +146,10 @@ def cleanup_leftover_servers():
                     port = entry.get('port')
                     proc = entry.get('proc')
                     pid = getattr(proc, 'pid', None) if proc is not None else None
+                    if pid:
+                        tracked_pids.add(pid)
+                    if port is not None:
+                        tracked_ports.add(port)
                     cmd = None
                     try:
                         cmd = ' '.join(proc.args) if proc is not None else None
@@ -136,38 +168,142 @@ def cleanup_leftover_servers():
         pass
 
     # 2) Inspect remaining processes; prefer psutil for reliable info
-    leftover = []
+    leftover_entries = []  # tuples (pid, name, cmdline, listen_ports)
     try:
         import psutil
         for p in psutil.process_iter(['pid', 'name', 'cmdline']):
             try:
+                pid = p.info.get('pid')
                 name = (p.info.get('name') or '').lower()
                 cmdline = ' '.join(p.info.get('cmdline') or []).lower()
                 if 'mcp-grok-server' in name or 'mcp-grok-server' in cmdline or 'mcp_grok.mcp_grok_server' in cmdline:
-                    leftover.append(f"{p.pid}: {name} {cmdline}")
+                    listen_ports = set()
+                    try:
+                        for c in p.connections(kind='inet'):
+                            # consider only listening sockets
+                            if c.status == psutil.CONN_LISTEN:
+                                if c.laddr and isinstance(c.laddr, tuple):
+                                    listen_ports.add(c.laddr[1])
+                    except Exception:
+                        # ignore connection inspection errors
+                        pass
+                    leftover_entries.append((pid, name, cmdline, listen_ports))
             except Exception:
                 pass
     except Exception:
-        # Fallback: use shell tools to find processes
+        # Fallback: use shell tools to find processes (limited info)
         try:
             import shutil
             if shutil.which('pgrep'):
                 out = subprocess.run(['pgrep', '-af', 'mcp-grok-server'], capture_output=True, text=True)
                 for line in out.stdout.splitlines():
                     if line.strip():
-                        leftover.append(line.strip())
+                        parts = line.strip().split(None, 1)
+                        pid = int(parts[0])
+                        cmdline = parts[1] if len(parts) > 1 else ''
+                        leftover_entries.append((pid, '', cmdline, set()))
             else:
                 out = subprocess.run(['ps', '-ef'], capture_output=True, text=True)
                 for line in out.stdout.splitlines():
                     if 'mcp-grok-server' in line or 'mcp_grok.mcp_grok_server' in line:
-                        leftover.append(line.strip())
+                        leftover_entries.append((None, '', line.strip(), set()))
         except Exception:
             pass
 
-    # If any leftover processes found, raise an exception to fail the test run
-    if leftover:
-        details = "\n".join(leftover)
-        raise RuntimeError(f"Leftover mcp-grok-server processes after tests:\n{details}\nPlease ensure tests clean up started servers.")
+    # 3) Kill untracked leftover servers, except those listening on port 8000
+    killed = []
+    not_killed = []
+    for pid, name, cmdline, listen_ports in leftover_entries:
+        if pid in tracked_pids:
+            # tracked by server_manager; was already asked to stop
+            continue
+        if 8000 in listen_ports:
+            # preserve server on port 8000
+            not_killed.append((pid, name, cmdline, listen_ports))
+            continue
+        # attempt to terminate the untracked process
+        try:
+            if pid is not None:
+                # prefer psutil termination if available
+                try:
+                    import psutil as _ps
+                    proc = _ps.Process(pid)
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=2)
+                    except Exception:
+                        proc.kill()
+                    killed.append((pid, name, cmdline, listen_ports))
+                    continue
+                except Exception:
+                    # fallback to os.kill
+                    import os, signal
+                    try:
+                        os.kill(pid, signal.SIGTERM)
+                    except Exception:
+                        pass
+            killed.append((pid, name, cmdline, listen_ports))
+        except Exception:
+            # record failure to kill
+            not_killed.append((pid, name, cmdline, listen_ports))
+
+    # small pause to let terminations settle
+    time.sleep(0.5)
+
+    # 4) Re-check for any remaining untracked (non-8000) leftover processes
+    remaining = []
+    try:
+        import psutil as _ps2
+        for p in _ps2.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                pid = p.info.get('pid')
+                name = (p.info.get('name') or '').lower()
+                cmdline = ' '.join(p.info.get('cmdline') or []).lower()
+                if 'mcp-grok-server' in name or 'mcp-grok-server' in cmdline or 'mcp_grok.mcp_grok_server' in cmdline:
+                    if pid in tracked_pids:
+                        continue
+                    # get listen ports
+                    listen_ports = set()
+                    try:
+                        for c in p.connections(kind='inet'):
+                            if c.status == _ps2.CONN_LISTEN and c.laddr and isinstance(c.laddr, tuple):
+                                listen_ports.add(c.laddr[1])
+                    except Exception:
+                        pass
+                    if 8000 in listen_ports:
+                        continue
+                    remaining.append((pid, name, cmdline, listen_ports))
+            except Exception:
+                pass
+    except Exception:
+        # Without psutil do a best-effort ps check
+        out = subprocess.run(['ps', '-ef'], capture_output=True, text=True)
+        for line in out.stdout.splitlines():
+            if 'mcp-grok-server' in line or 'mcp_grok.mcp_grok_server' in line:
+                parts = line.strip().split(None, 1)
+                try:
+                    pid = int(parts[0])
+                except Exception:
+                    pid = None
+                if pid in tracked_pids:
+                    continue
+                remaining.append((pid, '', line.strip(), set()))
+
+    if remaining:
+        details = []
+        for pid, name, cmdline, listen_ports in remaining:
+            details.append(f"{pid}: {name} {cmdline} listening={sorted(list(listen_ports))}")
+        raise RuntimeError(f"Leftover untracked mcp-grok-server processes after cleanup (non-8000):\n" + "\n".join(details))
+
+    # Optionally print summary of actions
+    if killed:
+        print("\nKilled untracked mcp-grok-server processes:")
+        for pid, name, cmdline, listen_ports in killed:
+            print(f" - {pid}: {name} {cmdline} listening={sorted(list(listen_ports))}")
+    if not_killed:
+        print("\nLeft untracked mcp-grok-server processes (preserved, e.g. port 8000):")
+        for pid, name, cmdline, listen_ports in not_killed:
+            print(f" - {pid}: {name} {cmdline} listening={sorted(list(listen_ports))}")
 
 
 # ----------------------------

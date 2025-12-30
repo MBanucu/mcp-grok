@@ -24,44 +24,89 @@ def _writable_logfile(preferred):
 
 class ServerManager:
     def __init__(self):
-        self._server_proc = None
+        # Maintain a stack of started servers to avoid orphaning and to allow
+        # stop_server() to stop the most-recently-started server (LIFO), which
+        # preserves test expectations and avoids leaking processes.
+        self._servers = []  # list of dicts: {port, proc, log_fd}
 
-    def start_server(self, port=8000):
-        # Check if server is already running on the given port
+    def _find_running_for_port(self, port):
+        for entry in self._servers:
+            proc = entry.get('proc')
+            if proc and proc.poll() is None and entry.get('port') == port:
+                return entry
+        return None
+
+    def start_server(self, port=8000, projects_dir=None):
+        # If a server is already listening on that port and we have tracked it,
+        # return the tracked process. If something else is listening, return None
         try:
             with socket.create_connection(('localhost', port), timeout=2):
-                # If we started the process and it is still running, return it
-                if self._server_proc is not None and self._server_proc.poll() is None:
+                entry = self._find_running_for_port(port)
+                if entry is not None:
                     print(f"Server is already running (started by this process) on port {port}.")
-                    return self._server_proc
-                # Otherwise, server is running but was not started by us
+                    return entry['proc']
                 print(f"Server is already running on port {port}.")
                 return None
         except (ConnectionRefusedError, OSError):
-            # Server is not running
+            # Port free
             pass
 
-        log = open(_writable_logfile(config.mcp_shell_log), "a")
+        # Start a new server process and push it onto the stack
+        log_fd = open(_writable_logfile(config.mcp_shell_log), "a")
+        cmd = ['mcp-grok-server', '--port', str(port)]
+        if projects_dir:
+            cmd.extend(['--projects-dir', projects_dir])
         proc = subprocess.Popen(
-            ['mcp-grok-server', '--port', str(port)],
-            stdout=log,
+            cmd,
+            stdout=log_fd,
             stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL,
             close_fds=True,
+            start_new_session=True,
             env={**os.environ, 'NO_COLOR': '1'},
         )
-        self._server_proc = proc
+        self._servers.append({'port': port, 'proc': proc, 'log_fd': log_fd})
         return proc
 
-    def stop_server(self):
-        p = self._server_proc
-        if p and p.poll() is None:
-            p.terminate()
+    def stop_server(self, proc=None, port=None):
+        """
+        Stop a running server.
+        - If `proc` is provided, stop the matching process if tracked.
+        - Else if `port` is provided, stop the most-recently-started server for that port.
+        - Else stop the most-recently-started server (LIFO).
+        """
+        # Find matching entry if proc or port specified (search LIFO so latest starts take precedence)
+        found_index = None
+        if proc is not None or port is not None:
+            for i in range(len(self._servers) - 1, -1, -1):
+                entry = self._servers[i]
+                if proc is not None and entry.get('proc') is proc:
+                    found_index = i
+                    break
+                if port is not None and entry.get('port') == port:
+                    found_index = i
+                    break
+        if found_index is not None:
+            entry = self._servers.pop(found_index)
+        else:
+            if not self._servers:
+                return
+            entry = self._servers.pop()
+
+        proc = entry.get('proc')
+        log_fd = entry.get('log_fd')
+        if proc and proc.poll() is None:
+            proc.terminate()
             try:
-                p.wait(timeout=5)
+                proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                p.kill()
-        self._server_proc = None
+                proc.kill()
+        try:
+            if log_fd:
+                log_fd.close()
+        except Exception:
+            pass
+
 
 
 server_manager = ServerManager()

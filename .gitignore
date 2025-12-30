@@ -12,3 +12,4 @@ wheels/
 
 # Nix and build outputs
 result
+GH_TOKEN
