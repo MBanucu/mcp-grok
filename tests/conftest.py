@@ -52,7 +52,12 @@ def wait_for_mcp_server(server_proc, timeout=30):
             if "Uvicorn running on http://" in line:
                 break
         else:
-            time.sleep(0.1)
+            # stdout not piped (server_manager writes to log file). Detect readiness by TCP connect.
+            try:
+                with socket.create_connection(("127.0.0.1", PORT), timeout=1):
+                    break
+            except Exception:
+                time.sleep(0.1)
         if time.time() - start_time > timeout:
             output = "".join(output_lines)
             print("\n[SERVER STARTUP TIMEOUT] Full server output so far:\n" + output)
