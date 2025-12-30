@@ -151,3 +151,74 @@ def cleanup_leftover_servers():
     if leftover:
         details = "\n".join(leftover)
         raise RuntimeError(f"Leftover mcp-grok-server processes after tests:\n{details}\nPlease ensure tests clean up started servers.")
+
+
+# ----------------------------
+# Per-test process tracking
+# ----------------------------
+try:
+    import psutil as _psutil
+except Exception:
+    _psutil = None
+
+_test_proc_before = {}
+_test_leaks = []
+
+
+def _find_mcp_procs():
+    procs = {}
+    if _psutil:
+        for p in _psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                name = (p.info.get('name') or '').lower()
+                cmdline = ' '.join(p.info.get('cmdline') or []).lower()
+                if 'mcp-grok-server' in name or 'mcp-grok-server' in cmdline or 'mcp_grok.mcp_grok_server' in cmdline:
+                    procs[p.pid] = (name, cmdline)
+            except Exception:
+                pass
+    else:
+        # Fallback: use ps
+        out = subprocess.run(['ps', '-eo', 'pid,comm,args'], capture_output=True, text=True)
+        for line in out.stdout.splitlines()[1:]:
+            parts = line.strip().split(None, 2)
+            if len(parts) >= 3:
+                pid_s, comm, args = parts
+                if 'mcp-grok-server' in comm or 'mcp-grok-server' in args or 'mcp_grok.mcp_grok_server' in args:
+                    try:
+                        pid = int(pid_s)
+                        procs[pid] = (comm, args)
+                    except Exception:
+                        pass
+    return procs
+
+
+def pytest_runtest_setup(item):
+    # snapshot before the test
+    _test_proc_before[item.nodeid] = set(_find_mcp_procs().keys())
+
+
+def pytest_runtest_teardown(item, nextitem):
+    before = _test_proc_before.get(item.nodeid, set())
+    after = set(_find_mcp_procs().keys())
+    started = after - before
+    if started:
+        # any started processes still present after teardown are potential leaks
+        details = []
+        all_procs = _find_mcp_procs()
+        for pid in started:
+            info = all_procs.get(pid)
+            if info:
+                details.append(f"{pid}: {info[0]} {info[1]}")
+        if details:
+            _test_leaks.append((item.nodeid, details))
+
+
+def pytest_sessionfinish(session, exitstatus):
+    if _test_leaks:
+        lines = ["Detected tests that started mcp-grok-server processes and did not stop them:"]
+        for nodeid, details in _test_leaks:
+            lines.append(f"- {nodeid}")
+            for d in details:
+                lines.append(f"    {d}")
+        # Print the summary and leave the existing session-level leftover check to fail the run
+        print("\n" + "\n".join(lines) + "\n")
