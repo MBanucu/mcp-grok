@@ -44,6 +44,7 @@
             pkgs.python312Packages.flake8
             pkgs.pyright
             pkgs.python312Packages.requests
+            pkgs.python312Packages.psutil
             pkgs.git
             pkgs.gh
             pkgs.jq
@@ -64,6 +65,7 @@
             pkgs.python312Packages.flake8
             pkgs.pyright
             pkgs.python312Packages.requests
+            pkgs.python312Packages.psutil
             pkgs.git
             pkgs.gh
             pkgs.jq
