@@ -68,6 +68,20 @@ class ServerManager:
         self._servers.append({'port': port, 'proc': proc, 'log_fd': log_fd})
         return proc
 
+    def _pop_entry(self, proc=None, port=None):
+        # Pop and return a matching server entry. Search LIFO so latest starts take precedence.
+        if proc is None and port is None:
+            if not self._servers:
+                return None
+            return self._servers.pop()
+        for i in range(len(self._servers) - 1, -1, -1):
+            entry = self._servers[i]
+            if proc is not None and entry.get('proc') is proc:
+                return self._servers.pop(i)
+            if port is not None and entry.get('port') == port:
+                return self._servers.pop(i)
+        return None
+
     def stop_server(self, proc=None, port=None):
         """
         Stop a running server.
@@ -75,23 +89,9 @@ class ServerManager:
         - Else if `port` is provided, stop the most-recently-started server for that port.
         - Else stop the most-recently-started server (LIFO).
         """
-        # Find matching entry if proc or port specified (search LIFO so latest starts take precedence)
-        found_index = None
-        if proc is not None or port is not None:
-            for i in range(len(self._servers) - 1, -1, -1):
-                entry = self._servers[i]
-                if proc is not None and entry.get('proc') is proc:
-                    found_index = i
-                    break
-                if port is not None and entry.get('port') == port:
-                    found_index = i
-                    break
-        if found_index is not None:
-            entry = self._servers.pop(found_index)
-        else:
-            if not self._servers:
-                return
-            entry = self._servers.pop()
+        entry = self._pop_entry(proc=proc, port=port)
+        if not entry:
+            return
 
         proc = entry.get('proc')
         log_fd = entry.get('log_fd')
@@ -106,7 +106,6 @@ class ServerManager:
                 log_fd.close()
         except Exception:
             pass
-
 
 
 server_manager = ServerManager()
