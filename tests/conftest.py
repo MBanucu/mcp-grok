@@ -289,11 +289,12 @@ def cleanup_leftover_servers():
                     continue
                 remaining.append((pid, '', line.strip(), set()))
 
-    if remaining:
-        details = []
-        for pid, name, cmdline, listen_ports in remaining:
-            details.append(f"{pid}: {name} {cmdline} listening={sorted(list(listen_ports))}")
-        raise RuntimeError(f"Leftover untracked mcp-grok-server processes after cleanup (non-8000):\n" + "\n".join(details))
+        if remaining:
+            details = []
+            for pid, name, cmdline, listen_ports in remaining:
+                details.append("%s: %s %s listening=%s" % (pid, name, cmdline, sorted(list(listen_ports))))
+            raise RuntimeError("Leftover untracked mcp-grok-server processes after cleanup (non-8000):\n" + "\n".join(details))
+
 
     # Optionally print summary of actions
     if killed:
