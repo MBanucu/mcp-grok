@@ -109,6 +109,23 @@ def cleanup_leftover_servers():
     try:
         from menu import menu_core
         sm = menu_core.server_manager
+        # Print the servers that are tracked and will be stopped (port and pid if available)
+        try:
+            tracked = getattr(sm, '_servers', [])
+            if tracked:
+                print("\nServers tracked by menu_core.server_manager that will be stopped:")
+                for entry in list(tracked):
+                    port = entry.get('port')
+                    proc = entry.get('proc')
+                    pid = getattr(proc, 'pid', None) if proc is not None else None
+                    cmd = None
+                    try:
+                        cmd = ' '.join(proc.args) if proc is not None else None
+                    except Exception:
+                        cmd = None
+                    print(f" - port={port}, pid={pid}, cmd={cmd}")
+        except Exception:
+            pass
         while getattr(sm, '_servers', None):
             try:
                 sm.stop_server()
