@@ -218,6 +218,18 @@ def pytest_runtest_teardown(item, nextitem):
     before = _test_proc_before.get(item.nodeid, set())
     after = set(_find_mcp_procs().keys())
     started = after - before
+
+    # Exclude processes that are intentionally tracked by module/session fixtures
+    try:
+        from menu import menu_core as _menu_core_for_tests
+        tracked = getattr(_menu_core_for_tests.server_manager, '_servers', [])
+        tracked_pids = {entry.get('proc').pid for entry in tracked if entry.get('proc')}
+        started = started - tracked_pids
+    except Exception:
+        # If we can't access the in-process server manager, continue as before
+        pass
+
+
     if started:
         # any started processes still present after teardown are potential leaks
         details = []
