@@ -237,7 +237,8 @@ def cleanup_leftover_servers():
                     continue
                 except Exception:
                     # fallback to os.kill
-                    import os, signal
+                    import os
+                    import signal
                     try:
                         os.kill(pid, signal.SIGTERM)
                     except Exception:
