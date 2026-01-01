@@ -2,7 +2,7 @@ import os
 import getpass
 import dataclasses
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 import datetime
 
@@ -18,6 +18,7 @@ class Config:
     )
     port: int = 8000
     default_project: str = 'default'
+    audit_log: Optional[str] = None
     log_timestamp: str = dataclasses.field(init=False)
 
     _instance = None
@@ -41,6 +42,8 @@ class Config:
 
     @property
     def server_audit_log(self):
+        if self.audit_log:
+            return self.audit_log
         return os.path.expanduser(f'~/.mcp-grok/{self.log_timestamp}_{self.port}_audit.log')
 
 
