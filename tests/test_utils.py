@@ -17,16 +17,15 @@ def api_change_active_project(server_url, project_name):
     assert resp.status_code == 200, f"Failed to change project: {resp.text}"
 
 
-def mcp_create_project(server_url, project_name):
+def mcp_create_project(server_url, project_name, projects_dir):
     """Create project via MCP API (asserts creation and presence on disk)."""
     payload = _build_create_project_payload(project_name)
     resp = requests.post(server_url, json=payload, headers=_json_headers_with_type())
     assert resp.status_code == 200, f"Failed: {resp.text}"
     data = resp.json()
     assert "result" in data, f"JSON-RPC error or missing result: {data}"
-    test_dir = os.path.expanduser("~/dev/mcp-projects-test")
-    assert os.path.isdir(os.path.join(test_dir, project_name)), f"Project dir not created: {test_dir}/{project_name}"
-    return os.path.join(test_dir, project_name)
+    assert os.path.isdir(os.path.join(projects_dir, project_name)), f"Project dir not created: {projects_dir}/{project_name}"
+    return os.path.join(projects_dir, project_name)
 
 
 def mcp_execute_shell(server_url, command):

@@ -6,9 +6,7 @@ import shutil
 import threading
 import queue
 import requests
-import pytest
 import contextlib
-
 from test_utils import mcp_create_project, mcp_execute_shell
 
 # =====================
@@ -16,27 +14,25 @@ from test_utils import mcp_create_project, mcp_execute_shell
 # =====================
 
 
-@pytest.mark.usefixtures("mcp_server")
 def test_get_active_project(mcp_server):
     """Should set and fetch the active project info after creation."""
     project_name = "proj_active_test"
-    mcp_create_project(mcp_server, project_name)
-    _assert_active_project_name(mcp_server, project_name)
+    mcp_create_project(mcp_server["url"], project_name, mcp_server["projects_dir"])
+    _assert_active_project_name(mcp_server["url"], project_name)
 
 
-@pytest.mark.usefixtures("mcp_server")
 def test_change_active_project(mcp_server):
     """Should change active project, reflect in shell, and show all projects as present."""
     project_a = "projA"
     project_b = "projB"
-    _make_projects(mcp_server, [project_a, project_b])
-    _change_active_project(mcp_server, project_a)
-    _assert_active_project_name(mcp_server, project_a)
-    _assert_shell_cwd_matches(mcp_server, project_a)
+    _make_projects(mcp_server["url"], [project_a, project_b], mcp_server["projects_dir"])
+    _change_active_project(mcp_server["url"], project_a)
+    _assert_active_project_name(mcp_server["url"], project_a)
+    _assert_shell_cwd_matches(mcp_server["url"], project_a, mcp_server["projects_dir"])
     all_projects = [project_a, project_b, "projC"]
-    _make_projects(mcp_server, ["projC"])
-    _assert_project_dirs_exist(all_projects)
-    _assert_listed_projects_superset(mcp_server, all_projects)
+    _make_projects(mcp_server["url"], ["projC"], mcp_server["projects_dir"])
+    _assert_project_dirs_exist(all_projects, mcp_server["projects_dir"])
+    _assert_listed_projects_superset(mcp_server["url"], all_projects)
 
 
 def test_default_project_activation():
@@ -44,7 +40,6 @@ def test_default_project_activation():
     with _running_server_with_default_project() as (server_url, default_project, project_path, log_buffer):
         _assert_active_project_api(server_url, default_project, project_path)
         # log_buffer now available for additional asserts if desired
-
 
 # =====================
 # Test helpers (one abstraction each)
@@ -81,21 +76,20 @@ def _change_active_project(server, name):
     assert name in result
 
 
-def _assert_shell_cwd_matches(server, project_name):
-    DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test")
+def _assert_shell_cwd_matches(server, project_name, projects_dir):
     echo_output = mcp_execute_shell(server, "echo $PWD")
-    assert echo_output.endswith(f"{DEV_ROOT}/{project_name}"), f"Shell $PWD: got {echo_output!r}"
+    expected = os.path.join(projects_dir, project_name)
+    assert echo_output.endswith(expected), f"Shell $PWD: got {echo_output!r} (expected to end with {expected!r})"
 
 
-def _make_projects(server, projects):
+def _make_projects(server, projects, projects_dir):
     for p in projects:
-        mcp_create_project(server, p)
+        mcp_create_project(server, p, projects_dir)
 
 
-def _assert_project_dirs_exist(names):
-    DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test")
+def _assert_project_dirs_exist(names, projects_dir):
     for n in names:
-        assert os.path.isdir(os.path.join(DEV_ROOT, n)), f"Project dir not created for {n}"
+        assert os.path.isdir(os.path.join(projects_dir, n)), f"Project dir not created for {n}"
 
 
 def _assert_listed_projects_superset(server, names):
@@ -199,7 +193,6 @@ def _cleanup_server(server_proc, projects_dir, log_buffer=None):
             print("(No output)")
         print("======= END OF MCP SERVER OUTPUT =======")
     shutil.rmtree(projects_dir, ignore_errors=True)
-
 
 # =====================
 # Pure utilities (lowest level)
