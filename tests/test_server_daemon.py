@@ -8,6 +8,7 @@ import pytest
 from mcp_grok import server_daemon
 from mcp_grok import server_client
 
+
 def check_server_up(host: str, port: int, timeout=2.0) -> bool:
     start = time.time()
     while time.time() - start < timeout:
@@ -18,6 +19,7 @@ def check_server_up(host: str, port: int, timeout=2.0) -> bool:
             time.sleep(0.1)
     return False
 
+
 def get_daemon_server_list(port):
     url = f"http://127.0.0.1:{port}/list"
     try:
@@ -25,6 +27,7 @@ def get_daemon_server_list(port):
             return json.load(resp).get("servers", {})
     except Exception as e:
         return {"error": str(e)}
+
 
 @pytest.fixture(scope="module", autouse=True)
 def check_servers_up_module(server_daemon_proc, mcp_server):
@@ -54,6 +57,7 @@ def check_servers_up_module(server_daemon_proc, mcp_server):
     servers_at_end = get_daemon_server_list(daemon_port)
     print(f"Server list from daemon at MODULE END: {servers_at_end}")
 
+
 @pytest.fixture(autouse=True)
 def check_managed_servers_unchanged(server_daemon_proc):
     """Before and after each test, check daemon's server /list remains identical."""
@@ -68,6 +72,7 @@ def check_managed_servers_unchanged(server_daemon_proc):
         f"After: {servers_after}"
     )
 
+
 def pick_free_port():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("127.0.0.1", 0))
@@ -75,9 +80,11 @@ def pick_free_port():
     s.close()
     return port
 
+
 class _FakePopen:
     _next = 200000
     _instances = {}
+
     def __init__(self, cmd, stdout=None, stderr=None, start_new_session=False):
         self.pid = _FakePopen._next
         _FakePopen._next += 1
@@ -85,6 +92,7 @@ class _FakePopen:
         self._sock = None
         # Removed fake socket port opening for minimal stub
         _FakePopen._instances[self.pid] = self
+
     def close(self):
         try:
             if self._sock:
@@ -92,6 +100,7 @@ class _FakePopen:
                 self._sock = None
         except Exception:
             pass
+
     @classmethod
     def kill(cls, pid, sig):
         inst = cls._instances.get(pid)
@@ -103,6 +112,7 @@ class _FakePopen:
                 pass
         return
 
+
 def _wait_for_port(port, timeout=3.0):
     start = time.time()
     while True:
@@ -113,6 +123,7 @@ def _wait_for_port(port, timeout=3.0):
             time.sleep(0.05)
         if time.time() - start > timeout:
             return False
+
 
 def test_daemon_start_list_stop(monkeypatch, tmp_path):
     daemon_port = pick_free_port()
@@ -167,6 +178,7 @@ def test_daemon_start_list_stop(monkeypatch, tmp_path):
                 thread.join(timeout=1)
         except Exception:
             print("Exception during final cleanup.")
+
 
 def test_run_daemon_stop_removes_managed_servers(monkeypatch, tmp_path):
     """Start daemon, start two managed servers, stop daemon, ensure servers removed."""
