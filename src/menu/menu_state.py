@@ -15,7 +15,6 @@ class MenuState:
     def __init__(self):
         self.mcp_running: bool = False
         self.proxy_proc: Optional[subprocess.Popen] = None
-        self.daemon_proc: Optional[subprocess.Popen] = None
         # Check if daemon is already running
         try:
             server_client.list_servers()
@@ -23,7 +22,7 @@ class MenuState:
             pass
         except Exception:
             # Start daemon as subprocess
-            self.daemon_proc = subprocess.Popen([
+            subprocess.Popen([
                 sys.executable, '-m', 'mcp_grok.server_daemon'
             ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             # Wait for daemon to be ready
@@ -73,14 +72,7 @@ class MenuState:
         self.proxy_proc = None
 
     def stop_daemon(self):
-        if self.daemon_proc:
-            try:
-                server_client.stop_daemon()
-            except Exception:
-                pass
-            try:
-                self.daemon_proc.terminate()
-                self.daemon_proc.wait(timeout=5)
-            except Exception:
-                self.daemon_proc.kill()
-            self.daemon_proc = None
+        try:
+            server_client.stop_daemon()
+        except Exception:
+            pass
