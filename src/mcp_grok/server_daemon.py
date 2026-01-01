@@ -62,12 +62,14 @@ def parse_start_params(payload: dict):
         return 0, projects_dir, "port required"
     return port, projects_dir, None
 
+
 def do_start_server(handler, port, projects_dir):
     try:
         info = handler.daemon._start_server_proc(port, projects_dir)
         return handler._send_json(200, {"result": info.to_dict()})
     except Exception as e:
         return handler._send_json(500, {"error": str(e)})
+
 
 def make_handler(daemon):
     """
@@ -184,20 +186,6 @@ def make_handler(daemon):
     return ServerDaemonHandler
 
 # The server always uses an instance-bound handler via make_handler(self).
-
-def parse_start_params(payload: dict):
-    port = int(payload.get("port") or 0)
-    projects_dir = payload.get("projects_dir")
-    if not port:
-        return 0, projects_dir, "port required"
-    return port, projects_dir, None
-
-def do_start_server(handler, port, projects_dir):
-    try:
-        info = handler.daemon._start_server_proc(port, projects_dir)
-        return handler._send_json(200, {"result": info.to_dict()})
-    except Exception as e:
-        return handler._send_json(500, {"error": str(e)})
 
 
 class ServerDaemonHTTPServer(HTTPServer):
