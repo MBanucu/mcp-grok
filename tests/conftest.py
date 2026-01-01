@@ -20,6 +20,8 @@ PORT = pick_free_port()
 DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test")
 
 
+
+
 def setup_project_dir():
     if os.path.exists(DEV_ROOT):
         shutil.rmtree(DEV_ROOT)
