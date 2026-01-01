@@ -1,5 +1,6 @@
 import subprocess
 
+
 def _get_listen_ports_from_psutil_proc(p):
     try:
         import psutil as _ps
@@ -146,7 +147,7 @@ def _find_mcp_procs_ps():
 
 def _find_mcp_procs():
     try:
-        import psutil
+        # import psutil (unused)
         return _find_mcp_procs_psutil()
     except Exception:
         return _find_mcp_procs_ps()
