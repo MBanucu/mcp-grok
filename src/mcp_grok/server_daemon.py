@@ -57,7 +57,10 @@ class ServerInfo:
 
 def parse_start_params(payload: dict) -> Tuple[int, Optional[str], Optional[str]]:
     port = int(payload.get("port") or 0)
-    projects_dir: Optional[str] = payload.get("projects_dir")
+    projects_dir_raw = payload.get("projects_dir")
+    if projects_dir_raw is not None and not isinstance(projects_dir_raw, str):
+        raise TypeError("projects_dir must be str or None")
+    projects_dir: Optional[str] = projects_dir_raw
     if not port:
         return 0, projects_dir, "port required"
     return port, projects_dir, None
