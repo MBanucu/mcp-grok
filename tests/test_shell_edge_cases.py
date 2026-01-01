@@ -3,7 +3,7 @@ from tests.test_utils import mcp_create_project, mcp_execute_shell
 
 def test_shell_double_pipe_or(mcp_server):
     project_name = "pytest_shell_double_pipe_or"
-    mcp_create_project(mcp_server["url"], project_name)
+    mcp_create_project(mcp_server["url"], project_name, mcp_server["projects_dir"])
     # Command succeeds
     out1 = mcp_execute_shell(mcp_server["url"], 'echo foo || echo bar')
     assert any("foo" in line for line in out1.splitlines()), f"Expected 'foo', got: {out1!r}"
@@ -16,7 +16,7 @@ def test_shell_double_pipe_or(mcp_server):
 
 def test_shell_ls_or_echo(mcp_server):
     project_name = "pytest_shell_ls_or_echo"
-    mcp_create_project(mcp_server["url"], project_name)
+    mcp_create_project(mcp_server["url"], project_name, mcp_server["projects_dir"])
     cmd = 'ls -l /run/opengl-driver/lib/ 2>/dev/null || echo "Directory not found or empty"'
     shell_output = mcp_execute_shell(mcp_server["url"], cmd)
     assert shell_output.strip(), "Shell output should not be empty."

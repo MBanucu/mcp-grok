@@ -17,7 +17,7 @@ from test_utils import mcp_create_project, mcp_execute_shell
 def test_get_active_project(mcp_server):
     """Should set and fetch the active project info after creation."""
     project_name = "proj_active_test"
-    mcp_create_project(mcp_server["url"], project_name)
+    mcp_create_project(mcp_server["url"], project_name, mcp_server["projects_dir"])
     _assert_active_project_name(mcp_server["url"], project_name)
 
 
@@ -25,12 +25,12 @@ def test_change_active_project(mcp_server):
     """Should change active project, reflect in shell, and show all projects as present."""
     project_a = "projA"
     project_b = "projB"
-    _make_projects(mcp_server["url"], [project_a, project_b])
+    _make_projects(mcp_server["url"], [project_a, project_b], mcp_server["projects_dir"])
     _change_active_project(mcp_server["url"], project_a)
     _assert_active_project_name(mcp_server["url"], project_a)
     _assert_shell_cwd_matches(mcp_server["url"], project_a, mcp_server["projects_dir"])
     all_projects = [project_a, project_b, "projC"]
-    _make_projects(mcp_server["url"], ["projC"])
+    _make_projects(mcp_server["url"], ["projC"], mcp_server["projects_dir"])
     _assert_project_dirs_exist(all_projects, mcp_server["projects_dir"])
     _assert_listed_projects_superset(mcp_server["url"], all_projects)
 
@@ -82,9 +82,9 @@ def _assert_shell_cwd_matches(server, project_name, projects_dir):
     assert echo_output.endswith(expected), f"Shell $PWD: got {echo_output!r} (expected to end with {expected!r})"
 
 
-def _make_projects(server, projects):
+def _make_projects(server, projects, projects_dir):
     for p in projects:
-        mcp_create_project(server, p)
+        mcp_create_project(server, p, projects_dir)
 
 
 def _assert_project_dirs_exist(names, projects_dir):
