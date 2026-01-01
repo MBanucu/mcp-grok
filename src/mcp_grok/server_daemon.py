@@ -18,13 +18,29 @@ from .server_client import DEFAULT_DAEMON_PORT
 from .config import config
 
 
-class ServerInfo(TypedDict):
+class ServerInfoDict(TypedDict):
     pid: int
     port: int
     projects_dir: str
     logfile: str
     started_at: float
 
+class ServerInfo:
+    def __init__(self, pid: int, port: int, projects_dir: str, logfile: str, started_at: float, proc: subprocess.Popen):
+        self.pid = pid
+        self.port = port
+        self.projects_dir = projects_dir
+        self.logfile = logfile
+        self.started_at = started_at
+        self.proc = proc
+    def to_dict(self) -> ServerInfoDict:
+        return ServerInfoDict(
+            pid=self.pid,
+            port=self.port,
+            projects_dir=self.projects_dir,
+            logfile=self.logfile,
+            started_at=self.started_at,
+        )
 
 HOST = "127.0.0.1"
 DAEMON_PORT = DEFAULT_DAEMON_PORT
@@ -58,13 +74,14 @@ def _start_server_proc(port: int, projects_dir: Optional[str] = None) -> ServerI
         projects_dir,
     ]
     proc = subprocess.Popen(cmd, stdout=logf, stderr=logf, start_new_session=True)
-    info: ServerInfo = {
-        "pid": proc.pid,
-        "port": port,
-        "projects_dir": projects_dir,
-        "logfile": logfile,
-        "started_at": time.time(),
-    }
+    info = ServerInfo(
+        pid=proc.pid,
+        port=port,
+        projects_dir=projects_dir,
+        logfile=logfile,
+        started_at=time.time(),
+        proc=proc
+    )
     with _SERVERS_LOCK:
         _SERVERS[proc.pid] = info
     return info
@@ -81,16 +98,23 @@ def _stop_server_proc_by_pid(pid: int) -> bool:
         except Exception:
             return False
     try:
-        os.kill(pid, signal.SIGTERM)
-        # give it a moment
-        time.sleep(0.2)
-        try:
-            os.kill(pid, 0)
-            # still alive, try kill
-            os.kill(pid, signal.SIGKILL)
-        except OSError:
-            # process gone
-            pass
+        # Prefer proc.terminate/poll/wait
+        proc_obj = getattr(info, 'proc', None)
+        if proc_obj is not None:
+            if proc_obj.poll() is None:
+                proc_obj.terminate()
+                try:
+                    proc_obj.wait(timeout=2)
+                except Exception:
+                    proc_obj.kill()
+        else:
+            os.kill(pid, signal.SIGTERM)
+            time.sleep(0.2)
+            try:
+                os.kill(pid, 0)
+                os.kill(pid, signal.SIGKILL)
+            except OSError:
+                pass
     except Exception:
         return False
     finally:
@@ -102,14 +126,14 @@ def _stop_server_proc_by_pid(pid: int) -> bool:
 def _stop_server_proc_by_port(port: int) -> bool:
     with _SERVERS_LOCK:
         for pid, info in list(_SERVERS.items()):
-            if info["port"] == port:
+            if info.port == port:
                 return _stop_server_proc_by_pid(pid)
     return False
 
 
 def _list_servers() -> Dict[str, Any]:
     with _SERVERS_LOCK:
-        return {str(pid): dict(info) for pid, info in _SERVERS.items()}
+        return {str(pid): info.to_dict() for pid, info in _SERVERS.items()}
 
 
 def _stop_all() -> int:
@@ -153,7 +177,7 @@ class _Handler(BaseHTTPRequestHandler):
             return self._send_json(400, {"error": "port required"})
         try:
             info = _start_server_proc(port, projects_dir)
-            return self._send_json(200, {"result": info})
+            return self._send_json(200, {"result": info.to_dict()})
         except Exception as e:
             return self._send_json(500, {"error": str(e)})
 
