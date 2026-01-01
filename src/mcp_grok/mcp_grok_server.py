@@ -56,10 +56,18 @@ def get_config_from_cli():
         default=config.default_project,
         help='Default project to activate on server start'
     )
+    parser.add_argument(
+        '--audit-log',
+        type=str,
+        default=None,
+        help='Path to audit log file'
+    )
     args = parser.parse_args()
     config.port = args.port
     config.projects_dir = args.projects_dir
     config.default_project = args.default_project
+    if args.audit_log:
+        config.audit_log = args.audit_log
     return config
 
 

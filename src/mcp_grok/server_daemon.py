@@ -230,6 +230,7 @@ class ServerDaemon:
         logf = open(logfile, "a+")
         cmd = [
             "mcp-grok-server", "--port", str(port), "--projects-dir", projects_dir,
+            "--audit-log", config.server_audit_log,
         ]
         proc = subprocess.Popen(cmd, stdout=logf, stderr=logf, start_new_session=True)
         info = ServerInfo(
