@@ -212,17 +212,14 @@ class ServerDaemon:
         self._servers_lock = threading.Lock()
         self.httpd: Optional[HTTPServer] = None
 
-    def _log_path_for(self, projects_dir: str, port: int) -> str:
-        try:
-            basedir = os.path.join(projects_dir, ".mcp_grok_daemon_logs")
-            os.makedirs(basedir, exist_ok=True)
-            return os.path.join(basedir, f"mcp_grok_{port}.log")
-        except Exception:
-            return os.path.join("/tmp", f"mcp_grok_{port}.log")
+    def _log_path_for(self, port: int) -> str:
+        path = os.path.expanduser(f'~/.mcp-grok/daemon_{port}_{config.log_timestamp}.log')
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        return path
 
     def _start_server_proc(self, port: int, projects_dir: Optional[str] = None) -> ServerInfo:
         projects_dir = projects_dir or config.projects_dir
-        logfile = self._log_path_for(projects_dir, port)
+        logfile = self._log_path_for(port)
         logf = open(logfile, "a+")
         cmd = [
             "mcp-grok-server", "--port", str(port), "--projects-dir", projects_dir,
