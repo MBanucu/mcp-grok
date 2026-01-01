@@ -53,7 +53,8 @@ def wait_for_log(log_file, timeout=10.0, poll_interval=0.2):
 
 def test_server_log(start_stop_server):
     # Always wait for the log up to 10 seconds, regardless of server status
-    wait_for_log(config.mcp_shell_log, timeout=10.0)
+    log_path = os.path.expanduser(f'~/.mcp-grok/{config.log_timestamp}_{config.port}_mcp-shell.log')
+    wait_for_log(log_path, timeout=10.0)
 
 
 def test_proxy_log(start_stop_proxy):

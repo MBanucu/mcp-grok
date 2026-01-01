@@ -1,13 +1,15 @@
+import os
 from menu import menu_core
 from mcp_grok.config import config
 
 
 def test_clear_mcp_log():
     # Write something, then clear
-    with open(config.mcp_shell_log, 'w') as f:
+    log_path = os.path.expanduser(f'~/.mcp-grok/{config.log_timestamp}_{config.port}_mcp-shell.log')
+    with open(log_path, 'w') as f:
         f.write('some text\n')
-    menu_core.clear_log(config.mcp_shell_log)
-    with open(config.mcp_shell_log, 'r') as f:
+    menu_core.clear_log(log_path)
+    with open(log_path, 'r') as f:
         assert f.read() == '', "MCP log not cleared"
 
 
