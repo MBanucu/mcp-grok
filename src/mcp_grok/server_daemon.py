@@ -32,18 +32,20 @@ class ServerInfoDict(TypedDict):
     projects_dir: str
     logfile: str
     started_at: float
+    audit_log: str
 
 
 class ServerInfo:
     def __init__(
         self, pid: int, port: int, projects_dir: str, logfile: str,
-        started_at: float, proc: subprocess.Popen
+        started_at: float, audit_log: str, proc: subprocess.Popen
     ):
         self.pid = pid
         self.port = port
         self.projects_dir = projects_dir
         self.logfile = logfile
         self.started_at = started_at
+        self.audit_log = audit_log
         self.proc = proc
 
     def to_dict(self) -> ServerInfoDict:
@@ -53,6 +55,7 @@ class ServerInfo:
             projects_dir=self.projects_dir,
             logfile=self.logfile,
             started_at=self.started_at,
+            audit_log=self.audit_log,
         )
 
 
@@ -235,6 +238,7 @@ class ServerDaemon:
             projects_dir=projects_dir,
             logfile=logfile,
             started_at=started_at,
+            audit_log=config.server_audit_log,
             proc=proc
         )
         with self._servers_lock:
