@@ -55,9 +55,9 @@ class ServerInfo:
         )
 
 
-def parse_start_params(payload: dict) -> Tuple[int, Any, Optional[str]]:
+def parse_start_params(payload: dict) -> Tuple[int, Optional[str], Optional[str]]:
     port = int(payload.get("port") or 0)
-    projects_dir = payload.get("projects_dir")
+    projects_dir: Optional[str] = payload.get("projects_dir")
     if not port:
         return 0, projects_dir, "port required"
     return port, projects_dir, None
@@ -287,7 +287,7 @@ class ServerDaemon:
                     return self._stop_server_proc_by_pid(pid)
         return False
 
-    def _list_servers(self) -> Dict[str, Any]:
+    def _list_servers(self) -> dict[str, ServerInfoDict]:
         with self._servers_lock:
             return {str(pid): info.to_dict() for pid, info in self._servers.items()}
 
