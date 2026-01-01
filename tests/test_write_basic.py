@@ -4,7 +4,7 @@ from tests.test_utils import api_write_file, api_read_file
 
 def test_write_whole_file(tmp_path, mcp_server):
     test_file = tmp_path / "write_all.txt"
-    server_url = mcp_server
+    server_url = mcp_server["url"]
     out = api_write_file(server_url, str(test_file), "hello\nworld\n")
     assert "Success" in out
     result = api_read_file(server_url, str(test_file))
@@ -13,7 +13,7 @@ def test_write_whole_file(tmp_path, mcp_server):
 
 def test_write_replaceall_full_file_overwrite(tmp_path, mcp_server):
     test_file = tmp_path / "replaceAll.txt"
-    server_url = mcp_server
+    server_url = mcp_server["url"]
     Path(test_file).write_text("foo bar foo FOO Foo foo\n")
     out = api_write_file(server_url, str(test_file), "AAAAA", replaceAll=True)
     assert "Success" in out or "replaced" in out or "fully replaced" in out
@@ -28,7 +28,7 @@ def test_write_replaceall_full_file_overwrite(tmp_path, mcp_server):
 
 def test_write_replaceall_nonexistent_file(tmp_path, mcp_server):
     test_file = tmp_path / "replaceAll-new.txt"
-    server_url = mcp_server
+    server_url = mcp_server["url"]
     content = "Just created with replaceAll!"
     out = api_write_file(server_url, str(test_file), content, replaceAll=True)
     assert "Success" in out or "replaced" in out or "fully replaced" in out

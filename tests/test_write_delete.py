@@ -6,7 +6,7 @@ def test_write_delete_lines(tmp_path, mcp_server):
     test_file = tmp_path / "delete-lines.txt"
     Path(test_file).write_text("one\ntwo\nthree\nfour\nfive\n")
     out = api_write_file(
-        mcp_server,
+        mcp_server["url"],
         str(test_file),
         "",
         replace_lines_start=1,
@@ -21,7 +21,7 @@ def test_write_delete_beyond_eof(tmp_path, mcp_server):
     test_file = tmp_path / "delete-beyond.txt"
     Path(test_file).write_text("1\n2\n3\n")
     out = api_write_file(
-        mcp_server,
+        mcp_server["url"],
         str(test_file),
         "",
         replace_lines_start=2,
@@ -36,7 +36,7 @@ def test_write_delete_entire_file(tmp_path, mcp_server):
     test_file = tmp_path / "delete-entire.txt"
     Path(test_file).write_text("aa\nbb\ncc\n")
     out = api_write_file(
-        mcp_server,
+        mcp_server["url"],
         str(test_file),
         "",
         replace_lines_start=0,

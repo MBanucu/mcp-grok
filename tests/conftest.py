@@ -275,37 +275,78 @@ def ensure_log_dirs():
         pass
 
 
+import threading
+import tempfile
+import atexit
+from mcp_grok import server_daemon, server_client
+
 @pytest.fixture(scope="session")
-def mcp_server():
-    setup_project_dir()
-    # Prefer using the ServerManager API to start and track the fixture server.
-    # Falls back to the legacy helper if the in-process server_manager isn't importable.
-    server_proc = None
-    try:
-        from menu import menu_core
+def server_daemon_proc():
+    # Pick a free port for the daemon
+    daemon_port = pick_free_port()
+    projects_dir = tempfile.mkdtemp(prefix="mcp_test_projects_")
+
+    # Start the daemon in a background thread
+    def run_daemon():
+        server_daemon.run_daemon(host="127.0.0.1", port=daemon_port)
+
+    t = threading.Thread(target=run_daemon, daemon=True)
+    t.start()
+
+    # Wait for daemon to start
+    import time as _time, socket as _socket
+    start = _time.time()
+    while True:
         try:
-            server_proc = menu_core.server_manager.start_server(port=PORT, projects_dir=DEV_ROOT)
+            with _socket.create_connection(("127.0.0.1", daemon_port), timeout=0.5):
+                break
         except Exception:
-            server_proc = None
-    except Exception:
-        server_proc = None
-
-    if server_proc is None:
-        # fallback: start process directly
-        server_proc = start_mcp_server()
-    wait_for_mcp_server(server_proc)
-
-    yield f"http://localhost:{PORT}/mcp"
-
-    # Teardown: prefer server_manager stop if possible, else the legacy teardown
+            _time.sleep(0.05)
+        if _time.time() - start > 10:
+            raise RuntimeError(f"Timed out waiting for daemon on port {daemon_port}")
+    yield {
+        "port": daemon_port,
+        "projects_dir": projects_dir,
+    }
+    # Stop the daemon
     try:
-        from menu import menu_core
-        try:
-            menu_core.server_manager.stop_server(proc=server_proc)
-        except Exception:
-            teardown_mcp_server(server_proc)
+        server_client.stop_daemon(daemon_port=daemon_port)
+        t.join(timeout=2)
     except Exception:
-        teardown_mcp_server(server_proc)
+        pass
+
+@pytest.fixture(scope="session")
+def mcp_server(server_daemon_proc):
+    daemon_port = server_daemon_proc["port"]
+    projects_dir = server_daemon_proc["projects_dir"]
+    server_port = pick_free_port()
+    try:
+        resp = server_client.start_server(port=server_port, projects_dir=projects_dir, daemon_port=daemon_port)
+        info = resp["result"]
+        # Wait for server to be ready
+        import time as _t, socket as _s
+        addr = ("127.0.0.1", server_port)
+        ready = False
+        for _ in range(60):  # up to 6 seconds
+            try:
+                with _s.create_connection(addr, timeout=0.2):
+                    ready = True
+                    break
+            except Exception:
+                _t.sleep(0.1)
+        if not ready:
+            raise RuntimeError(f"Managed server on port {server_port} not ready after 6 sec")
+    except Exception as e:
+        raise RuntimeError(f"Failed to start managed server via daemon: {e}")
+    yield {
+        "url": f"http://localhost:{server_port}/mcp",
+        "projects_dir": projects_dir
+    }
+    # Stop the managed server
+    try:
+        server_client.stop_managed_server(pid=info["pid"], daemon_port=daemon_port)
+    except Exception:
+        pass
 
 
 def _collect_and_print_tracked(sm, tracked_pids, tracked_ports):
