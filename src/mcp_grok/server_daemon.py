@@ -20,6 +20,7 @@ import subprocess
 import signal
 import time
 import datetime
+import argparse
 from typing import Dict, Any, Optional, TypedDict, Callable, Tuple, cast
 
 from .server_client import DEFAULT_DAEMON_PORT
@@ -348,4 +349,21 @@ def run_daemon(host: str = "127.0.0.1", port: int = DEFAULT_DAEMON_PORT) -> None
 
 
 if __name__ == "__main__":
-    run_daemon()
+    parser = argparse.ArgumentParser(
+        prog="mcp-grok-daemon",
+        description="MCP Daemon for managing mcp-grok-server processes"
+    )
+    parser.add_argument(
+        '--port',
+        type=int,
+        default=DEFAULT_DAEMON_PORT,
+        help='Port to run the daemon on'
+    )
+    parser.add_argument(
+        '--host',
+        type=str,
+        default="127.0.0.1",
+        help='Host to bind the daemon to'
+    )
+    args = parser.parse_args()
+    run_daemon(host=args.host, port=args.port)
