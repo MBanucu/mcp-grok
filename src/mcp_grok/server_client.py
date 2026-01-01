@@ -70,5 +70,3 @@ def stop_managed_server(pid: Optional[int] = None, port: Optional[int] = None, d
     if port is not None:
         payload["port"] = port
     return _post("/server/stop", payload, daemon_port=daemon_port)
-
-

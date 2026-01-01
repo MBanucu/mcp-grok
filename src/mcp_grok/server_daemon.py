@@ -14,6 +14,10 @@ import signal
 import time
 from typing import Dict, Any, Optional, TypedDict
 
+from .server_client import DEFAULT_DAEMON_PORT
+from .config import config
+
+
 class ServerInfo(TypedDict):
     pid: int
     port: int
@@ -21,8 +25,6 @@ class ServerInfo(TypedDict):
     logfile: str
     started_at: float
 
-from .server_client import DEFAULT_DAEMON_PORT
-from .config import config
 
 HOST = "127.0.0.1"
 DAEMON_PORT = DEFAULT_DAEMON_PORT
@@ -136,60 +138,73 @@ class _Handler(BaseHTTPRequestHandler):
         else:
             self._send_json(404, {"error": "not found"})
 
-    def do_POST(self):
+    def _read_json_body(self) -> dict:
         length = int(self.headers.get("Content-Length", "0"))
         body = self.rfile.read(length).decode("utf-8") if length else "{}"
         try:
-            payload = json.loads(body)
+            return json.loads(body)
         except Exception:
-            payload = {}
+            return {}
+
+    def _handle_start(self, payload: dict):
+        port = int(payload.get("port") or 0)
+        projects_dir = payload.get("projects_dir")
+        if not port:
+            return self._send_json(400, {"error": "port required"})
+        try:
+            info = _start_server_proc(port, projects_dir)
+            return self._send_json(200, {"result": info})
+        except Exception as e:
+            return self._send_json(500, {"error": str(e)})
+
+    def _handle_stop_all(self):
+        count = _stop_all()
+        return self._send_json(200, {"stopped": count})
+
+    def _handle_daemon_stop(self):
+        # Respond first, then stop the HTTP server cleanly.
+        self._send_json(200, {"result": "stopping"})
+        try:
+            daemon: Optional[HTTPServer] = _DAEMON_SERVER
+            if daemon is not None:
+                # Shutdown in a new thread so we can return the response
+                threading.Thread(target=daemon.shutdown, daemon=True).start()
+        except Exception:
+            pass
+        return
+
+    def _handle_server_stop(self, payload: dict):
+        pid = payload.get("pid")
+        port = payload.get("port")
+        ok = False
+        if pid is not None:
+            try:
+                ok = _stop_server_proc_by_pid(int(pid))
+            except Exception:
+                ok = False
+        elif port is not None:
+            try:
+                ok = _stop_server_proc_by_port(int(port))
+            except Exception:
+                ok = False
+        else:
+            return self._send_json(400, {"error": "pid or port required"})
+        return self._send_json(200, {"result": bool(ok)})
+
+    def do_POST(self):
+        payload = self._read_json_body()
 
         if self.path == "/start":
-            port = int(payload.get("port") or 0)
-            projects_dir = payload.get("projects_dir")
-            if not port:
-                return self._send_json(400, {"error": "port required"})
-            try:
-                info = _start_server_proc(port, projects_dir)
-                return self._send_json(200, {"result": info})
-            except Exception as e:
-                return self._send_json(500, {"error": str(e)})
+            return self._handle_start(payload)
 
         if self.path == "/stop_all":
-            count = _stop_all()
-            return self._send_json(200, {"stopped": count})
+            return self._handle_stop_all()
 
-        # Daemon stop endpoint (only /daemon/stop)
         if self.path == "/daemon/stop":
-            # Respond first, then stop the HTTP server cleanly.
-            self._send_json(200, {"result": "stopping"})
-            try:
-                daemon: Optional[HTTPServer] = _DAEMON_SERVER
-                if daemon is not None:
-                    # Shutdown in a new thread so we can return the response
-                    threading.Thread(target=daemon.shutdown, daemon=True).start()
-            except Exception:
-                pass
-            return
+            return self._handle_daemon_stop()
 
-        # Server stop endpoint (only /server/stop)
         if self.path == "/server/stop":
-            pid = payload.get("pid")
-            port = payload.get("port")
-            ok = False
-            if pid is not None:
-                try:
-                    ok = _stop_server_proc_by_pid(int(pid))
-                except Exception:
-                    ok = False
-            elif port is not None:
-                try:
-                    ok = _stop_server_proc_by_port(int(port))
-                except Exception:
-                    ok = False
-            else:
-                return self._send_json(400, {"error": "pid or port required"})
-            return self._send_json(200, {"result": bool(ok)})
+            return self._handle_server_stop(payload)
 
         return self._send_json(404, {"error": "not found"})
 

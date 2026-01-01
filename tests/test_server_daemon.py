@@ -1,9 +1,6 @@
 import socket
 import time
 import threading
-from http.server import HTTPServer
-
-import pytest
 
 from mcp_grok import server_daemon
 from mcp_grok import server_client
@@ -103,7 +100,6 @@ def test_daemon_start_list_stop(monkeypatch, tmp_path):
     # Monkeypatch Popen and os.kill to avoid starting real processes
     monkeypatch.setattr(server_daemon.subprocess, "Popen", _FakePopen)
     monkeypatch.setattr(server_daemon.os, "kill", _FakePopen.kill)
-
 
     thread = threading.Thread(
         target=lambda: server_daemon.run_daemon(host="127.0.0.1", port=daemon_port),
