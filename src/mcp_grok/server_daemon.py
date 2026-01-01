@@ -21,7 +21,9 @@ import signal
 import time
 import datetime
 import argparse
-from typing import Dict, Any, Optional, TypedDict, Callable, Tuple, List, Set, cast
+from typing import (
+    Dict, Any, Optional, TypedDict, Callable, Tuple, List, Set, cast
+)
 
 from .server_client import DEFAULT_DAEMON_PORT
 from .config import config
@@ -60,7 +62,9 @@ class ServerInfo:
         )
 
 
-def parse_start_params(payload: dict) -> Tuple[Optional[int], Optional[str], Optional[str]]:
+def parse_start_params(
+    payload: dict
+) -> Tuple[Optional[int], Optional[str], Optional[str]]:
     port_raw = payload.get("port")
     port = int(port_raw) if port_raw is not None else None
     projects_dir_raw = payload.get("projects_dir")
@@ -72,7 +76,9 @@ def parse_start_params(payload: dict) -> Tuple[Optional[int], Optional[str], Opt
     return port, projects_dir, None
 
 
-def do_start_server(handler: 'ServerDaemonHandler', port: int, projects_dir: Optional[str]) -> None:
+def do_start_server(
+    handler: 'ServerDaemonHandler', port: int, projects_dir: Optional[str]
+) -> None:
     assert port is not None
     try:
         info = handler.daemon._start_server_proc(cast(int, port), projects_dir)
@@ -139,7 +145,9 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
             return self._do_server_stop_by_port(port)
         return self._send_json(400, {"error": "No valid pid or port provided"})
 
-    def _parse_stop_server_params(self, payload: Dict[str, Any]) -> Tuple[Optional[int], Optional[int], Optional[str]]:
+    def _parse_stop_server_params(
+        self, payload: Dict[str, Any]
+    ) -> Tuple[Optional[int], Optional[int], Optional[str]]:
         pid = payload.get("pid")
         port = payload.get("port")
         if pid is not None:
@@ -186,7 +194,9 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
         return
 
 
-def make_handler(daemon: 'ServerDaemon') -> Callable[..., 'ServerDaemonHandler']:
+def make_handler(
+    daemon: 'ServerDaemon'
+) -> Callable[..., 'ServerDaemonHandler']:
     """
     Factory returning a handler class bound to provided daemon instance.
     This binds 'self.daemon' in each request handler instance, using closure scope,
@@ -348,40 +358,51 @@ def run_daemon(host: str = "127.0.0.1", port: int = DEFAULT_DAEMON_PORT) -> None
     daemon.run()
 
 
-def _gather_leftover_entries() -> List[Tuple[Optional[int], str, str, Set[int]]]:
-    """Gather entries of leftover mcp-grok-server processes."""
+def _gather_with_psutil() -> List[Tuple[Optional[int], str, str, Set[int]]]:
+    """Gather mcp-grok-server processes using psutil."""
     entries = []
-    try:
-        import psutil
-        for p in psutil.process_iter():
-            try:
-                pid = getattr(p, 'pid', None) or p.pid
-                name = (p.name() or '').lower()
-                cmdline = ' '.join(p.cmdline() or []).lower()
-                if 'mcp-grok-server' in name or 'mcp-grok-server' in cmdline or 'mcp_grok.mcp_grok_server' in cmdline:
-                    listen_ports = set()
-                    try:
-                        for c in p.connections(kind='inet'):
-                            if c.status == psutil.CONN_LISTEN and c.laddr:
-                                listen_ports.add(c.laddr[1])
-                    except Exception:
-                        pass
-                    entries.append((pid, name, cmdline, listen_ports))
-            except Exception:
-                pass
-    except ImportError:
-        # Fallback to shell
+    import psutil
+    for p in psutil.process_iter():
         try:
-            out = subprocess.run(['pgrep', '-af', 'mcp-grok-server'], capture_output=True, text=True)
-            for line in out.stdout.splitlines():
-                if line.strip():
-                    parts = line.strip().split(None, 1)
-                    pid = int(parts[0])
-                    cmdline = parts[1] if len(parts) > 1 else ''
-                    entries.append((pid, '', cmdline, set()))
+            pid = getattr(p, 'pid', None) or p.pid
+            name = (p.name() or '').lower()
+            cmdline = ' '.join(p.cmdline() or []).lower()
+            if 'mcp-grok-server' in name or 'mcp-grok-server' in cmdline or 'mcp_grok.mcp_grok_server' in cmdline:
+                listen_ports = set()
+                try:
+                    for c in p.connections(kind='inet'):
+                        if c.status == psutil.CONN_LISTEN and c.laddr:
+                            listen_ports.add(c.laddr[1])
+                except Exception:
+                    pass
+                entries.append((pid, name, cmdline, listen_ports))
         except Exception:
             pass
     return entries
+
+
+def _gather_with_shell() -> List[Tuple[Optional[int], str, str, Set[int]]]:
+    """Gather mcp-grok-server processes using shell commands."""
+    entries = []
+    try:
+        out = subprocess.run(['pgrep', '-af', 'mcp-grok-server'], capture_output=True, text=True)
+        for line in out.stdout.splitlines():
+            if line.strip():
+                parts = line.strip().split(None, 1)
+                pid = int(parts[0])
+                cmdline = parts[1] if len(parts) > 1 else ''
+                entries.append((pid, '', cmdline, set()))
+    except Exception:
+        pass
+    return entries
+
+
+def _gather_leftover_entries() -> List[Tuple[Optional[int], str, str, Set[int]]]:
+    """Gather entries of leftover mcp-grok-server processes."""
+    try:
+        return _gather_with_psutil()
+    except ImportError:
+        return _gather_with_shell()
 
 
 def _kill_untracked(leftover_entries: List[Tuple[Optional[int], str, str, Set[int]]],
