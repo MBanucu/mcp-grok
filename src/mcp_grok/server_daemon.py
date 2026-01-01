@@ -19,6 +19,7 @@ import os
 import subprocess
 import signal
 import time
+import datetime
 from typing import Dict, Any, Optional, TypedDict, Callable, Tuple, cast
 
 from .server_client import DEFAULT_DAEMON_PORT
@@ -213,7 +214,8 @@ class ServerDaemon:
         self.httpd: Optional[HTTPServer] = None
 
     def _log_path_for(self, port: int) -> str:
-        path = os.path.expanduser(f'~/.mcp-grok/daemon_{port}_{config.log_timestamp}.log')
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        path = os.path.expanduser(f'~/.mcp-grok/daemon_{port}_{timestamp}.log')
         os.makedirs(os.path.dirname(path), exist_ok=True)
         return path
 
