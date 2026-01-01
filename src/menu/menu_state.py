@@ -23,7 +23,7 @@ class MenuState:
         except Exception:
             # Start daemon as subprocess
             subprocess.Popen([
-                sys.executable, '-m', 'mcp_grok.server_daemon'
+                'mcp-grok-daemon'
             ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             # Wait for daemon to be ready
             for _ in range(30):  # 3 seconds
