@@ -19,7 +19,7 @@ import os
 import subprocess
 import signal
 import time
-from typing import Dict, Any, Optional, TypedDict
+from typing import Dict, Any, Optional, TypedDict, Callable, Tuple
 
 from .server_client import DEFAULT_DAEMON_PORT
 from .config import config
@@ -55,7 +55,7 @@ class ServerInfo:
         )
 
 
-def parse_start_params(payload: dict):
+def parse_start_params(payload: dict) -> Tuple[int, Any, Optional[str]]:
     port = int(payload.get("port") or 0)
     projects_dir = payload.get("projects_dir")
     if not port:
@@ -63,7 +63,7 @@ def parse_start_params(payload: dict):
     return port, projects_dir, None
 
 
-def do_start_server(handler, port, projects_dir):
+def do_start_server(handler: 'ServerDaemonHandler', port: int, projects_dir: Optional[str]) -> None:
     try:
         info = handler.daemon._start_server_proc(port, projects_dir)
         return handler._send_json(200, {"result": info.to_dict()})
@@ -73,11 +73,11 @@ def do_start_server(handler, port, projects_dir):
 
 class ServerDaemonHandler(BaseHTTPRequestHandler):
 
-    def __init__(self, daemon, *args, **kwargs):
+    def __init__(self, daemon: 'ServerDaemon', *args, **kwargs) -> None:
         self.daemon = daemon
         super().__init__(*args, **kwargs)
 
-    def _send_json(self, code: int, payload: Any):
+    def _send_json(self, code: int, payload: Any) -> None:
         payload_bytes = json.dumps(payload).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
@@ -85,14 +85,14 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload_bytes)
 
-    def do_GET(self):
+    def do_GET(self) -> None:
         if self.path == "/list":
             data = {"servers": self.daemon._list_servers()}
             self._send_json(200, data)
         else:
             self._send_json(404, {"error": "not found"})
 
-    def _read_json_body(self) -> dict:
+    def _read_json_body(self) -> Dict[str, Any]:
         length = int(self.headers.get("Content-Length", "0"))
         body = self.rfile.read(length).decode("utf-8") if length else "{}"
         try:
@@ -100,17 +100,17 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
         except Exception:
             return {}
 
-    def _handle_start(self, payload: dict):
+    def _handle_start(self, payload: Dict[str, Any]) -> None:
         port, projects_dir, error = parse_start_params(payload)
         if error:
             return self._send_json(400, {"error": error})
         return do_start_server(self, port, projects_dir)
 
-    def _handle_stop_all(self):
+    def _handle_stop_all(self) -> None:
         count = self.daemon._stop_all()
         return self._send_json(200, {"stopped": count})
 
-    def _handle_daemon_stop(self):
+    def _handle_daemon_stop(self) -> None:
         self._send_json(200, {"result": "stopping"})
         try:
             threading.Thread(target=self.server.shutdown, daemon=True).start()
@@ -118,7 +118,7 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
             pass
         return
 
-    def _handle_server_stop(self, payload: dict):
+    def _handle_server_stop(self, payload: Dict[str, Any]) -> None:
         pid, port, error = self._parse_stop_server_params(payload)
         if error:
             return self._send_json(400, {"error": error})
@@ -128,7 +128,7 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
             return self._do_server_stop_by_port(port)
         return self._send_json(400, {"error": "No valid pid or port provided"})
 
-    def _parse_stop_server_params(self, payload: dict):
+    def _parse_stop_server_params(self, payload: Dict[str, Any]) -> Tuple[Optional[int], Optional[int], Optional[str]]:
         pid = payload.get("pid")
         port = payload.get("port")
         if pid is not None:
@@ -145,21 +145,21 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
             return None, None, "pid or port required"
         return pid, port, None
 
-    def _do_server_stop_by_pid(self, pid: int):
+    def _do_server_stop_by_pid(self, pid: int) -> None:
         try:
             ok = self.daemon._stop_server_proc_by_pid(pid)
         except Exception:
             ok = False
         return self._send_json(200, {"result": bool(ok)})
 
-    def _do_server_stop_by_port(self, port: int):
+    def _do_server_stop_by_port(self, port: int) -> None:
         try:
             ok = self.daemon._stop_server_proc_by_port(port)
         except Exception:
             ok = False
         return self._send_json(200, {"result": bool(ok)})
 
-    def do_POST(self):
+    def do_POST(self) -> None:
         payload = self._read_json_body()
         if self.path == "/start":
             return self._handle_start(payload)
@@ -171,11 +171,11 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
             return self._handle_server_stop(payload)
         return self._send_json(404, {"error": "not found"})
 
-    def log_message(self, format, *args):
+    def log_message(self, format: str, *args) -> None:
         return
 
 
-def make_handler(daemon):
+def make_handler(daemon: 'ServerDaemon') -> Callable[..., 'ServerDaemonHandler']:
     """
     Factory returning a handler class bound to provided daemon instance.
     This binds 'self.daemon' in each request handler instance, using closure scope,
@@ -189,17 +189,17 @@ def make_handler(daemon):
 
 class ServerDaemonHTTPServer(HTTPServer):
 
-    def __init__(self, server_address, RequestHandlerClass, daemon):
+    def __init__(self, server_address, RequestHandlerClass, daemon: 'ServerDaemon') -> None:
         super().__init__(server_address, RequestHandlerClass)
         self.daemon = daemon  # Still available if further extension is required.
 
-    def finish_request(self, request, client_address):
+    def finish_request(self, request, client_address) -> None:
         self.RequestHandlerClass(request, client_address, self)
 
 
 class ServerDaemon:
 
-    def __init__(self, host: str = "127.0.0.1", port: int = DEFAULT_DAEMON_PORT):
+    def __init__(self, host: str = "127.0.0.1", port: int = DEFAULT_DAEMON_PORT) -> None:
         self.host = host
         self.port = port
         self._servers: Dict[int, ServerInfo] = {}
@@ -248,7 +248,7 @@ class ServerDaemon:
         except Exception:
             return False
 
-    def _stop_info_proc(self, pid: int, info) -> bool:
+    def _stop_info_proc(self, pid: int, info: ServerInfo) -> bool:
         try:
             proc_obj = getattr(info, 'proc', None)
             if proc_obj is not None:
@@ -268,7 +268,7 @@ class ServerDaemon:
                 self._servers.pop(pid, None)
         return True
 
-    def _terminate_proc_obj(self, proc_obj):
+    def _terminate_proc_obj(self, proc_obj: subprocess.Popen) -> bool:
         try:
             if proc_obj.poll() is None:
                 proc_obj.terminate()
@@ -300,7 +300,7 @@ class ServerDaemon:
                 count += 1
         return count
 
-    def run(self):
+    def run(self) -> None:
         # Always use handler factory to provide daemon instance context to all HTTP requests
         handler_class = make_handler(self)
         self.httpd = ServerDaemonHTTPServer((self.host, self.port), handler_class, self)
@@ -319,12 +319,12 @@ class ServerDaemon:
             finally:
                 self.httpd = None
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         if self.httpd:
             self.httpd.shutdown()
 
 
-def run_daemon(host: str = "127.0.0.1", port: int = DEFAULT_DAEMON_PORT):
+def run_daemon(host: str = "127.0.0.1", port: int = DEFAULT_DAEMON_PORT) -> None:
     daemon = ServerDaemon(host, port)
     daemon.run()
 
