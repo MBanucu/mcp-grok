@@ -104,11 +104,17 @@ def _gather_with_psutil():
     entries = []
     import psutil
 
-    for p in psutil.process_iter(['pid', 'name', 'cmdline']):
+    for p in psutil.process_iter():
         try:
-            pid = p.info.get('pid')
-            name = (p.info.get('name') or '').lower()
-            cmdline = ' '.join(p.info.get('cmdline') or []).lower()
+            pid = getattr(p, 'pid', None) or p.pid
+            try:
+                name = (p.name() or '').lower()
+            except Exception:
+                name = ''
+            try:
+                cmdline = ' '.join(p.cmdline() or []).lower()
+            except Exception:
+                cmdline = ''
             if 'mcp-grok-server' in name or 'mcp-grok-server' in cmdline or 'mcp_grok.mcp_grok_server' in cmdline:
                 listen_ports = _get_listen_ports_from_psutil_proc(p)
                 entries.append((pid, name, cmdline, listen_ports))
@@ -197,11 +203,17 @@ def _kill_untracked(leftover_entries, tracked_pids):
 
 def _proc_matches_psutil(p, tracked_pids):
     try:
-        pid = p.info.get('pid')
+        pid = getattr(p, 'pid', None) or p.pid
         if pid in tracked_pids:
             return None
-        name = (p.info.get('name') or '').lower()
-        cmdline = ' '.join(p.info.get('cmdline') or []).lower()
+        try:
+            name = (p.name() or '').lower()
+        except Exception:
+            name = ''
+        try:
+            cmdline = ' '.join(p.cmdline() or []).lower()
+        except Exception:
+            cmdline = ''
         if not ('mcp-grok-server' in name or 'mcp-grok-server' in cmdline or 'mcp_grok.mcp_grok_server' in cmdline):
             return None
         listen_ports = _get_listen_ports_from_psutil_proc(p)
@@ -387,10 +399,16 @@ _test_leaks = []
 def _find_mcp_procs_psutil():
     procs = {}
     import psutil as _ps
-    for p in _ps.process_iter(['pid', 'name', 'cmdline']):
+    for p in _ps.process_iter():
         try:
-            name = (p.info.get('name') or '').lower()
-            cmdline = ' '.join(p.info.get('cmdline') or []).lower()
+            try:
+                name = (p.name() or '').lower()
+            except Exception:
+                name = ''
+            try:
+                cmdline = ' '.join(p.cmdline() or []).lower()
+            except Exception:
+                cmdline = ''
             if 'mcp-grok-server' in name or 'mcp-grok-server' in cmdline or 'mcp_grok.mcp_grok_server' in cmdline:
                 procs[p.pid] = (name, cmdline)
         except Exception:
