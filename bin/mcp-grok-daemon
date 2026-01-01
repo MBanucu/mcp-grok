@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Wrapper to launch the MCP daemon via uv and python
+exec python -m mcp_grok.server_daemon "$@"
