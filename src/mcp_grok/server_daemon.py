@@ -19,6 +19,7 @@ import os
 import subprocess
 import signal
 import time
+import datetime
 from typing import Dict, Any, Optional, TypedDict, Callable, Tuple, cast
 
 from .server_client import DEFAULT_DAEMON_PORT
@@ -212,14 +213,17 @@ class ServerDaemon:
         self._servers_lock = threading.Lock()
         self.httpd: Optional[HTTPServer] = None
 
-    def _log_path_for(self, port: int) -> str:
-        path = os.path.expanduser(f'~/.mcp-grok/daemon_{port}_{config.log_timestamp}.log')
+    def _log_path_for(self, port: int, timestamp: str) -> str:
+        path = os.path.expanduser(f'~/.mcp-grok/{timestamp}_{port}_mcp-server.log')
         os.makedirs(os.path.dirname(path), exist_ok=True)
         return path
 
     def _start_server_proc(self, port: int, projects_dir: Optional[str] = None) -> ServerInfo:
+        now = datetime.datetime.now()
+        started_at = now.timestamp()
+        timestamp_str = now.strftime("%Y%m%d_%H%M%S")
         projects_dir = projects_dir or config.projects_dir
-        logfile = self._log_path_for(port)
+        logfile = self._log_path_for(port, timestamp_str)
         logf = open(logfile, "a+")
         cmd = [
             "mcp-grok-server", "--port", str(port), "--projects-dir", projects_dir,
@@ -230,7 +234,7 @@ class ServerDaemon:
             port=port,
             projects_dir=projects_dir,
             logfile=logfile,
-            started_at=time.time(),
+            started_at=started_at,
             proc=proc
         )
         with self._servers_lock:
