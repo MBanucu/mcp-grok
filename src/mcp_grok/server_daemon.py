@@ -436,6 +436,60 @@ def cleanup_leftover_servers():
         print(f"Left {len(not_killed)} processes untouched (e.g., on port 8000).")
 
 
+def _gather_leftover_daemons() -> List[Tuple[Optional[int], str, str, Set[int]]]:
+    """Gather entries of leftover mcp-grok-daemon processes."""
+    entries = []
+    try:
+        import psutil
+        for p in psutil.process_iter():
+            try:
+                pid = getattr(p, 'pid', None) or p.pid
+                name = (p.name() or '').lower()
+                cmdline = ' '.join(p.cmdline() or []).lower()
+                if 'mcp-grok-daemon' in name or 'mcp-grok-daemon' in cmdline or 'mcp_grok.server_daemon' in cmdline:
+                    listen_ports = set()
+                    try:
+                        for c in p.connections(kind='inet'):
+                            if c.status == psutil.CONN_LISTEN and c.laddr:
+                                listen_ports.add(c.laddr[1])
+                    except Exception:
+                        pass
+                    entries.append((pid, name, cmdline, listen_ports))
+            except Exception:
+                pass
+    except ImportError:
+        # Fallback to shell
+        try:
+            out = subprocess.run(['pgrep', '-af', 'mcp-grok-daemon'], capture_output=True, text=True)
+            for line in out.stdout.splitlines():
+                if line.strip():
+                    parts = line.strip().split(None, 1)
+                    pid = int(parts[0])
+                    cmdline = parts[1] if len(parts) > 1 else ''
+                    entries.append((pid, '', cmdline, set()))
+        except Exception:
+            pass
+    return entries
+
+
+def cleanup_leftover_daemons():
+    """Clean up leftover mcp-grok-daemon processes."""
+    leftover_entries = _gather_leftover_daemons()
+    killed = []
+    not_killed = []
+    for pid, name, cmdline, listen_ports in leftover_entries:
+        if pid is not None:
+            try:
+                os.kill(pid, signal.SIGTERM)
+                killed.append((pid, name, cmdline, listen_ports))
+            except Exception:
+                not_killed.append((pid, name, cmdline, listen_ports))
+    if killed:
+        print(f"Cleaned up {len(killed)} leftover mcp-grok-daemon processes.")
+    if not_killed:
+        print(f"Could not kill {len(not_killed)} processes.")
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="mcp-grok-daemon",
