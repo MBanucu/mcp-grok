@@ -19,7 +19,7 @@ import os
 import subprocess
 import signal
 import time
-from typing import Dict, Any, Optional, TypedDict, Callable, Tuple
+from typing import Dict, Any, Optional, TypedDict, Callable, Tuple, cast
 
 from .server_client import DEFAULT_DAEMON_PORT
 from .config import config
@@ -55,20 +55,22 @@ class ServerInfo:
         )
 
 
-def parse_start_params(payload: dict) -> Tuple[int, Optional[str], Optional[str]]:
-    port = int(payload.get("port") or 0)
+def parse_start_params(payload: dict) -> Tuple[Optional[int], Optional[str], Optional[str]]:
+    port_raw = payload.get("port")
+    port = int(port_raw) if port_raw is not None else None
     projects_dir_raw = payload.get("projects_dir")
     if projects_dir_raw is not None and not isinstance(projects_dir_raw, str):
         raise TypeError("projects_dir must be str or None")
     projects_dir: Optional[str] = projects_dir_raw
-    if not port:
-        return 0, projects_dir, "port required"
+    if port is None or port == 0:
+        return None, projects_dir, "port required"
     return port, projects_dir, None
 
 
 def do_start_server(handler: 'ServerDaemonHandler', port: int, projects_dir: Optional[str]) -> None:
+    assert port is not None
     try:
-        info = handler.daemon._start_server_proc(port, projects_dir)
+        info = handler.daemon._start_server_proc(cast(int, port), projects_dir)
         return handler._send_json(200, {"result": info.to_dict()})
     except Exception as e:
         return handler._send_json(500, {"error": str(e)})
@@ -107,7 +109,8 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
         port, projects_dir, error = parse_start_params(payload)
         if error:
             return self._send_json(400, {"error": error})
-        return do_start_server(self, port, projects_dir)
+        assert port is not None  # Since error would have been returned
+        return do_start_server(self, cast(int, port), projects_dir)
 
     def _handle_stop_all(self) -> None:
         count = self.daemon._stop_all()
