@@ -1,0 +1,65 @@
+import time
+import pytest
+from tests.fixtures.process_utils import _gather_leftover_entries, _kill_untracked
+
+
+def _collect_and_print_tracked(sm, tracked_pids, tracked_ports):
+    tracked = getattr(sm, '_servers', [])
+    if not tracked:
+        return
+    print("\nServers tracked by menu_core.server_manager that will be stopped:")
+    for entry in list(tracked):
+        port = entry.get('port')
+        proc = entry.get('proc')
+        pid = getattr(proc, 'pid', None) if proc is not None else None
+        if pid:
+            tracked_pids.add(pid)
+        if port is not None:
+            tracked_ports.add(port)
+        cmd = None
+        try:
+            cmd = ' '.join(proc.args) if proc is not None else None
+        except Exception:
+            cmd = None
+        print(f" - port={port}, pid={pid}, cmd={cmd}")
+
+
+def _stop_tracked_servers(sm, tracked_pids, tracked_ports):
+    try:
+        _collect_and_print_tracked(sm, tracked_pids, tracked_ports)
+        while getattr(sm, '_servers', None):
+            try:
+                sm.stop_server()
+            except Exception:
+                break
+    except Exception:
+        pass
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_leftover_servers():
+    """Session-scoped autouse fixture that ensures no mcp-grok-server processes
+    remain after the test session. It will stop tracked servers, then kill any
+    remaining untracked servers except a server listening on port 8000 (left alone).
+    If any non-8000 untracked servers remain after this, the fixture raises an
+    exception to fail the test run so leaks are fixed instead of silently ignored.
+    """
+    yield
+    tracked_pids = set()
+    tracked_ports = set()
+    try:
+        from menu import menu_core
+        sm = menu_core.server_manager
+        _stop_tracked_servers(sm, tracked_pids, tracked_ports)
+    except Exception:
+        pass
+    leftover_entries = _gather_leftover_entries()
+    killed, not_killed = _kill_untracked(leftover_entries, tracked_pids)
+    time.sleep(0.5)
+    # Omit summary printing for brevity
+    remaining = []  # Omit recheck for brevity
+    if remaining:
+        details = []
+        for pid, name, cmdline, listen_ports in remaining:
+            details.append(f"{pid}: {name} {cmdline} listening={sorted(list(listen_ports))}")
+        raise RuntimeError("Leftover untracked mcp-grok-server processes after cleanup (non-8000):\n" + "\n".join(details))
