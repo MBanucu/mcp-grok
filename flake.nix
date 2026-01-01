@@ -54,6 +54,7 @@
           shellHook = ''
             export PYTHONPATH="$PWD/src:$PWD/tests:$PYTHONPATH"
             export PATH="$PWD/bin:$PATH"
+            export GH_TOKEN=$(cat ~/.GH_TOKEN 2>/dev/null || echo "")
             python -m menu.menu
             exit $?
           '';
@@ -75,6 +76,7 @@
           shellHook = ''
             export PYTHONPATH="$PWD/src:$PWD/tests:$PYTHONPATH"
             export PATH="$PWD/bin:$PATH"
+            export GH_TOKEN=$(cat ~/.GH_TOKEN 2>/dev/null || echo "")
           '';
         };
       };

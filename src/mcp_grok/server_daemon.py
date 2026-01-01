@@ -22,6 +22,7 @@ from typing import Dict, Any, Optional, TypedDict
 from .server_client import DEFAULT_DAEMON_PORT
 from .config import config
 
+
 class ServerInfoDict(TypedDict):
     pid: int
     port: int
@@ -29,14 +30,19 @@ class ServerInfoDict(TypedDict):
     logfile: str
     started_at: float
 
+
 class ServerInfo:
-    def __init__(self, pid: int, port: int, projects_dir: str, logfile: str, started_at: float, proc: subprocess.Popen):
+    def __init__(
+        self, pid: int, port: int, projects_dir: str, logfile: str,
+        started_at: float, proc: subprocess.Popen
+    ):
         self.pid = pid
         self.port = port
         self.projects_dir = projects_dir
         self.logfile = logfile
         self.started_at = started_at
         self.proc = proc
+
     def to_dict(self) -> ServerInfoDict:
         return ServerInfoDict(
             pid=self.pid,
@@ -46,12 +52,14 @@ class ServerInfo:
             started_at=self.started_at,
         )
 
+
 def make_handler(daemon):
     """Factory returning a handler class bound to provided daemon instance.
     This binds 'self.daemon' in each request handler instance, using closure scope,
     and avoids nonstandard signature hacks (required for http.server compatibility).
     """
     class ServerDaemonHandler(BaseHTTPRequestHandler):
+
         def __init__(self, *args, **kwargs):
             self.daemon = daemon
             super().__init__(*args, **kwargs)
@@ -133,20 +141,26 @@ def make_handler(daemon):
             return self._send_json(404, {"error": "not found"})
 
         def log_message(self, format, *args):
+
             return
 
     return ServerDaemonHandler
 
 # The server always uses an instance-bound handler via make_handler(self).
 
+
 class ServerDaemonHTTPServer(HTTPServer):
+
     def __init__(self, server_address, RequestHandlerClass, daemon):
         super().__init__(server_address, RequestHandlerClass)
         self.daemon = daemon  # Still available if further extension is required.
+
     def finish_request(self, request, client_address):
         self.RequestHandlerClass(request, client_address, self)
 
+
 class ServerDaemon:
+
     def __init__(self, host: str = "127.0.0.1", port: int = DEFAULT_DAEMON_PORT):
         self.host = host
         self.port = port
@@ -258,9 +272,11 @@ class ServerDaemon:
         if self.httpd:
             self.httpd.shutdown()
 
+
 def run_daemon(host: str = "127.0.0.1", port: int = DEFAULT_DAEMON_PORT):
     daemon = ServerDaemon(host, port)
     daemon.run()
+
 
 if __name__ == "__main__":
     run_daemon()

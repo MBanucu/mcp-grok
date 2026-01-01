@@ -1,13 +1,14 @@
 import socket
 import time
 import threading
-
+import re
+import urllib.request
+import json
+import pytest
 from mcp_grok import server_daemon
 from mcp_grok import server_client
-import pytest
 
 def check_server_up(host: str, port: int, timeout=2.0) -> bool:
-    import socket, time
     start = time.time()
     while time.time() - start < timeout:
         try:
@@ -16,10 +17,6 @@ def check_server_up(host: str, port: int, timeout=2.0) -> bool:
         except Exception:
             time.sleep(0.1)
     return False
-
-import re
-import urllib.request
-import json
 
 def get_daemon_server_list(port):
     url = f"http://127.0.0.1:{port}/list"
@@ -34,22 +31,24 @@ def check_servers_up_module(server_daemon_proc, mcp_server):
     # Check server_daemon_proc
     daemon_port = server_daemon_proc.get("port")
     assert daemon_port, "server_daemon_proc did not specify a port"
-    assert _wait_for_port(daemon_port), f"Server daemon from server_daemon_proc is not up at MODULE START (port={daemon_port})"
-
+    assert _wait_for_port(daemon_port), (
+        f"Server daemon from server_daemon_proc is not up at MODULE START (port={daemon_port})"
+    )
     # Check mcp_server
     url = mcp_server.get("url")
     assert url, "mcp_server did not specify a url"
     m = re.search(r":(\d+)[^\d]", url)
     assert m, f"Could not extract port from mcp_server['url']: {url}"
     mcp_port = int(m.group(1))
-    assert _wait_for_port(mcp_port), f"mcp_server is not up at MODULE START (port={mcp_port})"
-
+    assert _wait_for_port(mcp_port), (
+        f"mcp_server is not up at MODULE START (port={mcp_port})"
+    )
     servers_at_start = get_daemon_server_list(daemon_port)
     print(f"Server list from daemon at MODULE START: {servers_at_start}")
-
     yield
-
-    assert _wait_for_port(daemon_port), f"Server daemon from server_daemon_proc went down at MODULE END (port={daemon_port})"
+    assert _wait_for_port(daemon_port), (
+        f"Server daemon from server_daemon_proc went down at MODULE END (port={daemon_port})"
+    )
     # If you expect mcp_server to be up:
     # assert _wait_for_port(mcp_port), f"mcp_server went down at MODULE END (port={mcp_port})"
     servers_at_end = get_daemon_server_list(daemon_port)
@@ -85,7 +84,6 @@ class _FakePopen:
         self.args = cmd
         self._sock = None
         # Removed fake socket port opening for minimal stub
-        pass
         _FakePopen._instances[self.pid] = self
     def close(self):
         try:
@@ -128,7 +126,11 @@ def test_daemon_start_list_stop(monkeypatch, tmp_path):
         print(f"Waiting for daemon on port {daemon_port}...")
         assert _wait_for_port(daemon_port), "Daemon did not start in time"
         print(f"Starting managed server on port {server_port}")
-        resp = server_client.start_server(port=server_port, projects_dir=str(tmp_path), daemon_port=daemon_port)
+        resp = server_client.start_server(
+            port=server_port,
+            projects_dir=str(tmp_path),
+            daemon_port=daemon_port
+        )
         print(f"start_server resp: {resp}")
         assert isinstance(resp, dict) and "result" in resp
         info = resp["result"]
@@ -137,7 +139,10 @@ def test_daemon_start_list_stop(monkeypatch, tmp_path):
         listing = server_client.list_servers(daemon_port=daemon_port)
         print(f"server list after start: {listing}")
         assert str(pid) in listing.get("servers", {})
-        stop_resp = server_client.stop_managed_server(pid=pid, daemon_port=daemon_port)
+        stop_resp = server_client.stop_managed_server(
+            pid=pid,
+            daemon_port=daemon_port
+        )
         print(f"stop_managed_server resp: {stop_resp}")
         listing_post = server_client.list_servers(daemon_port=daemon_port)
         print(f"servers listing after stop: {listing_post}")
@@ -177,10 +182,18 @@ def test_run_daemon_stop_removes_managed_servers(monkeypatch, tmp_path):
         print(f"Waiting for daemon on port {daemon_port}...")
         assert _wait_for_port(daemon_port), "Daemon did not start in time"
         print(f"Starting managed server 1 on port {sp1}")
-        r1 = server_client.start_server(port=sp1, projects_dir=str(tmp_path), daemon_port=daemon_port)
+        r1 = server_client.start_server(
+            port=sp1,
+            projects_dir=str(tmp_path),
+            daemon_port=daemon_port
+        )
         print(f"start_server 1 resp: {r1}")
         print(f"Starting managed server 2 on port {sp2}")
-        r2 = server_client.start_server(port=sp2, projects_dir=str(tmp_path), daemon_port=daemon_port)
+        r2 = server_client.start_server(
+            port=sp2,
+            projects_dir=str(tmp_path),
+            daemon_port=daemon_port
+        )
         print(f"start_server 2 resp: {r2}")
         pid1 = r1["result"]["pid"]
         pid2 = r2["result"]["pid"]
@@ -190,8 +203,12 @@ def test_run_daemon_stop_removes_managed_servers(monkeypatch, tmp_path):
         assert str(pid1) in listing.get("servers", {})
         assert str(pid2) in listing.get("servers", {})
         print(f"Checking connections to ports {sp1} and {sp2}")
-        assert _wait_for_port(sp1), f"Managed server port {sp1} not accepting connections"
-        assert _wait_for_port(sp2), f"Managed server port {sp2} not accepting connections"
+        assert _wait_for_port(sp1), (
+            f"Managed server port {sp1} not accepting connections"
+        )
+        assert _wait_for_port(sp2), (
+            f"Managed server port {sp2} not accepting connections"
+        )
         stopd = server_client.stop_daemon(daemon_port=daemon_port)
         print(f"daemon stop resp: {stopd}")
         assert stopd.get("result") == "stopping"
@@ -200,13 +217,20 @@ def test_run_daemon_stop_removes_managed_servers(monkeypatch, tmp_path):
         assert not thread.is_alive(), "Daemon thread did not exit after stop"
         deadline = time.time() + 2.0
         while time.time() < deadline:
-            if not _wait_for_port(sp1, timeout=0.2) and not _wait_for_port(sp2, timeout=0.2):
+            if (
+                not _wait_for_port(sp1, timeout=0.2) and
+                not _wait_for_port(sp2, timeout=0.2)
+            ):
                 break
             time.sleep(0.05)
         print(f"Port {sp1} up after daemon stop? {_wait_for_port(sp1, timeout=0.02)}")
         print(f"Port {sp2} up after daemon stop? {_wait_for_port(sp2, timeout=0.02)}")
-        assert not _wait_for_port(sp1, timeout=0.02), f"Managed server port {sp1} should be down"
-        assert not _wait_for_port(sp2, timeout=0.02), f"Managed server port {sp2} should be down"
+        assert not _wait_for_port(sp1, timeout=0.02), (
+            f"Managed server port {sp1} should be down"
+        )
+        assert not _wait_for_port(sp2, timeout=0.02), (
+            f"Managed server port {sp2} should be down"
+        )
         # Use the handler endpoint instead of direct _SERVERS access
         servers_after_stop = get_daemon_server_list(daemon_port)
         print(f"Remaining managed servers after daemon stop: {list(servers_after_stop.keys())}")
@@ -227,4 +251,3 @@ def test_run_daemon_stop_removes_managed_servers(monkeypatch, tmp_path):
             thread.join(timeout=1)
         except Exception:
             print("Exception during final cleanup.")
-
