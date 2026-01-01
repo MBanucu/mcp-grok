@@ -269,9 +269,10 @@ class MenuApp:
 
     def _handle_log_action(self, value: Optional[str]) -> bool:
         if value == 'logs_mcp':
-            show_log(config.mcp_shell_log, "MCP Shell Logs")
+            show_log(os.path.expanduser(f'~/.mcp-grok/{config.log_timestamp}_{config.port}_mcp-shell.log'), "MCP Shell Logs")
         elif value == 'clear_logs_mcp':
-            show_log(config.mcp_shell_log, "MCP Shell Log", clear=True)
+            show_log(os.path.expanduser(
+                f'~/.mcp-grok/{config.log_timestamp}_{config.port}_mcp-shell.log'), "MCP Shell Log", clear=True)
         elif value == 'logs_proxy':
             show_log(config.proxy_log, "SuperAssistant Proxy Logs")
         elif value == 'clear_logs_proxy':

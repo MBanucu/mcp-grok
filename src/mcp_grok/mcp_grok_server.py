@@ -15,7 +15,10 @@ def _suppress_closed_resource_error(record):
 
 
 def setup_logging():
-    logfile = config.server_audit_log
+    if config.audit_log:
+        logfile = config.audit_log
+    else:
+        logfile = os.path.expanduser(f'~/.mcp-grok/{config.log_timestamp}_{config.port}_audit.log')
     logdir = os.path.dirname(logfile)
     try:
         os.makedirs(logdir, exist_ok=True)

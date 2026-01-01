@@ -52,7 +52,8 @@ class ServerManager:
             pass
 
         # Start a new server process and push it onto the stack
-        log_fd = open(_writable_logfile(config.mcp_shell_log), "a")
+        log_fd = open(_writable_logfile(os.path.expanduser(
+            f'~/.mcp-grok/{config.log_timestamp}_{config.port}_mcp-shell.log')), "a")
         cmd = ['mcp-grok-server', '--port', str(port)]
         if projects_dir:
             cmd.extend(['--projects-dir', projects_dir])
