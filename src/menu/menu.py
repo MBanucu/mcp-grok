@@ -35,7 +35,7 @@ def handle_stop_proxy(state: MenuState) -> bool:
 
 
 def handle_show_mcp_logs() -> bool:
-    content = menu_core.log_content(config.mcp_shell_log)
+    content = menu_core.log_content(os.path.expanduser(f'~/.mcp-grok/{config.log_timestamp}_{config.port}_mcp-shell.log'))
     if content:
         print(ANSI_ESCAPE.sub('', content[-1000:]))
     else:
@@ -44,7 +44,7 @@ def handle_show_mcp_logs() -> bool:
 
 
 def handle_clear_mcp_logs() -> bool:
-    menu_core.clear_log(config.mcp_shell_log)
+    menu_core.clear_log(os.path.expanduser(f'~/.mcp-grok/{config.log_timestamp}_{config.port}_mcp-shell.log'))
     print("MCP Shell log cleared.")
     return True
 
@@ -167,6 +167,7 @@ def main() -> None:
         if state:
             state.stop_mcp()
             state.stop_proxy()
+            state.stop_daemon()
 
 
 if __name__ == '__main__':
