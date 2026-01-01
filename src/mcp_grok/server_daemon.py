@@ -21,7 +21,7 @@ import signal
 import time
 import datetime
 import argparse
-from typing import Dict, Any, Optional, TypedDict, Callable, Tuple, cast
+from typing import Dict, Any, Optional, TypedDict, Callable, Tuple, List, Set, cast
 
 from .server_client import DEFAULT_DAEMON_PORT
 from .config import config
@@ -346,6 +346,73 @@ class ServerDaemon:
 def run_daemon(host: str = "127.0.0.1", port: int = DEFAULT_DAEMON_PORT) -> None:
     daemon = ServerDaemon(host, port)
     daemon.run()
+
+
+def _gather_leftover_entries() -> List[Tuple[Optional[int], str, str, Set[int]]]:
+    """Gather entries of leftover mcp-grok-server processes."""
+    entries = []
+    try:
+        import psutil
+        for p in psutil.process_iter():
+            try:
+                pid = getattr(p, 'pid', None) or p.pid
+                name = (p.name() or '').lower()
+                cmdline = ' '.join(p.cmdline() or []).lower()
+                if 'mcp-grok-server' in name or 'mcp-grok-server' in cmdline or 'mcp_grok.mcp_grok_server' in cmdline:
+                    listen_ports = set()
+                    try:
+                        for c in p.connections(kind='inet'):
+                            if c.status == psutil.CONN_LISTEN and c.laddr:
+                                listen_ports.add(c.laddr[1])
+                    except Exception:
+                        pass
+                    entries.append((pid, name, cmdline, listen_ports))
+            except Exception:
+                pass
+    except ImportError:
+        # Fallback to shell
+        try:
+            out = subprocess.run(['pgrep', '-af', 'mcp-grok-server'], capture_output=True, text=True)
+            for line in out.stdout.splitlines():
+                if line.strip():
+                    parts = line.strip().split(None, 1)
+                    pid = int(parts[0])
+                    cmdline = parts[1] if len(parts) > 1 else ''
+                    entries.append((pid, '', cmdline, set()))
+        except Exception:
+            pass
+    return entries
+
+
+def _kill_untracked(leftover_entries: List[Tuple[Optional[int], str, str, Set[int]]],
+                    tracked_pids: Set[int]) -> Tuple[List, List]:
+    """Kill untracked mcp-grok-server processes, except those on port 8000."""
+    killed = []
+    not_killed = []
+    for pid, name, cmdline, listen_ports in leftover_entries:
+        if pid in tracked_pids:
+            continue
+        if 8000 in listen_ports:
+            not_killed.append((pid, name, cmdline, listen_ports))
+            continue
+        if pid is not None:
+            try:
+                os.kill(pid, signal.SIGTERM)
+                killed.append((pid, name, cmdline, listen_ports))
+            except Exception:
+                not_killed.append((pid, name, cmdline, listen_ports))
+    return killed, not_killed
+
+
+def cleanup_leftover_servers():
+    """Clean up leftover mcp-grok-server processes not managed by the daemon."""
+    tracked_pids = set()  # Assuming no tracked for daemon, or pass from ServerDaemon
+    leftover_entries = _gather_leftover_entries()
+    killed, not_killed = _kill_untracked(leftover_entries, tracked_pids)
+    if killed:
+        print(f"Cleaned up {len(killed)} leftover mcp-grok-server processes.")
+    if not_killed:
+        print(f"Left {len(not_killed)} processes untouched (e.g., on port 8000).")
 
 
 def main():
