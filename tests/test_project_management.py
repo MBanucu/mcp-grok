@@ -6,9 +6,7 @@ import shutil
 import threading
 import queue
 import requests
-import pytest
 import contextlib
-
 from test_utils import mcp_create_project, mcp_execute_shell
 
 # =====================
@@ -42,8 +40,6 @@ def test_default_project_activation():
     with _running_server_with_default_project() as (server_url, default_project, project_path, log_buffer):
         _assert_active_project_api(server_url, default_project, project_path)
         # log_buffer now available for additional asserts if desired
-
-
 
 # =====================
 # Test helpers (one abstraction each)
@@ -197,7 +193,6 @@ def _cleanup_server(server_proc, projects_dir, log_buffer=None):
             print("(No output)")
         print("======= END OF MCP SERVER OUTPUT =======")
     shutil.rmtree(projects_dir, ignore_errors=True)
-
 
 # =====================
 # Pure utilities (lowest level)

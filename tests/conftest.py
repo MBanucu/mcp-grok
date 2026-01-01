@@ -3,9 +3,11 @@ import shutil
 import subprocess
 import time
 import socket
+import tempfile
+import threading
 import pytest
-
 from mcp_grok.config import config
+from mcp_grok import server_daemon, server_client
 
 
 def pick_free_port():
@@ -18,8 +20,6 @@ def pick_free_port():
 
 PORT = pick_free_port()
 DEV_ROOT = os.path.expanduser("~/dev/mcp-projects-test")
-
-
 
 
 def setup_project_dir():
@@ -90,6 +90,7 @@ def teardown_mcp_server(server_proc):
 
 
 # --- helpers for gathering/killing processes ---
+
 def _get_listen_ports_from_psutil_proc(p):
     try:
         import psutil as _ps
@@ -275,11 +276,6 @@ def ensure_log_dirs():
         pass
 
 
-import threading
-import tempfile
-import atexit
-from mcp_grok import server_daemon, server_client
-
 @pytest.fixture(scope="session")
 def server_daemon_proc():
     # Pick a free port for the daemon
@@ -294,7 +290,8 @@ def server_daemon_proc():
     t.start()
 
     # Wait for daemon to start
-    import time as _time, socket as _socket
+    import time as _time
+    import socket as _socket
     start = _time.time()
     while True:
         try:
@@ -315,6 +312,7 @@ def server_daemon_proc():
     except Exception:
         pass
 
+
 @pytest.fixture(scope="session")
 def mcp_server(server_daemon_proc):
     daemon_port = server_daemon_proc["port"]
@@ -324,7 +322,8 @@ def mcp_server(server_daemon_proc):
         resp = server_client.start_server(port=server_port, projects_dir=projects_dir, daemon_port=daemon_port)
         info = resp["result"]
         # Wait for server to be ready
-        import time as _t, socket as _s
+        import time as _t
+        import socket as _s
         addr = ("127.0.0.1", server_port)
         ready = False
         for _ in range(60):  # up to 6 seconds
@@ -430,6 +429,7 @@ def cleanup_leftover_servers():
 # ----------------------------
 # Per-test process tracking
 # ----------------------------
+
 try:
     import psutil as _psutil
 except Exception:
