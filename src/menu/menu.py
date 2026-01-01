@@ -167,6 +167,7 @@ def main() -> None:
         if state:
             state.stop_mcp()
             state.stop_proxy()
+            state.stop_daemon()
 
 
 if __name__ == '__main__':

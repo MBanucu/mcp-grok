@@ -1,9 +1,8 @@
 import subprocess
-import threading
+import sys
 import time
 from typing import Optional
 from . import menu_core
-from mcp_grok import server_daemon
 from mcp_grok import server_client
 from mcp_grok.config import config
 
@@ -16,18 +15,26 @@ class MenuState:
     def __init__(self):
         self.mcp_running: bool = False
         self.proxy_proc: Optional[subprocess.Popen] = None
-        # Start the daemon in a thread
-        self.daemon_thread = threading.Thread(target=server_daemon.run_daemon, daemon=True)
-        self.daemon_thread.start()
-        # Wait for daemon to be ready
-        for _ in range(30):  # 3 seconds
-            try:
-                server_client.list_servers()
-                break
-            except Exception:
-                time.sleep(0.1)
-        else:
-            raise RuntimeError("Daemon did not start in time")
+        self.daemon_proc: Optional[subprocess.Popen] = None
+        # Check if daemon is already running
+        try:
+            server_client.list_servers()
+            # Daemon is running
+            pass
+        except Exception:
+            # Start daemon as subprocess
+            self.daemon_proc = subprocess.Popen([
+                sys.executable, '-m', 'mcp_grok.server_daemon'
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            # Wait for daemon to be ready
+            for _ in range(30):  # 3 seconds
+                try:
+                    server_client.list_servers()
+                    break
+                except Exception:
+                    time.sleep(0.1)
+            else:
+                raise RuntimeError("Daemon did not start in time")
 
     def is_mcp_running(self) -> bool:
         try:
@@ -64,3 +71,16 @@ class MenuState:
     def stop_proxy(self):
         menu_core.stop_proxy(self.proxy_proc)
         self.proxy_proc = None
+
+    def stop_daemon(self):
+        if self.daemon_proc:
+            try:
+                server_client.stop_daemon()
+            except Exception:
+                pass
+            try:
+                self.daemon_proc.terminate()
+                self.daemon_proc.wait(timeout=5)
+            except Exception:
+                self.daemon_proc.kill()
+            self.daemon_proc = None
