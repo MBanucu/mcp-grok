@@ -212,7 +212,15 @@ Example for configuration.nix:
 ```
 
 > The provided `default.nix` forwards transparently to the flake package for maximal compatibility as an overlay or with legacy `nix-build`.
+## Contributing
+
+To contribute to this project:
+
+- **Branching and PRs**: Avoid pushing directly to the `main` branch. Create a feature branch for your changes and submit a Pull Request (PR) for review and integration.
+- **Code Quality**: Follow the linting and type checking guidelines in the "Code Quality" section above.
+- **Testing**: Ensure all tests pass before submitting a PR.
 
 ---
+
 Happy grokking, and feel free to contribute or file issues!
 
