@@ -32,18 +32,20 @@ class ServerInfoDict(TypedDict):
     projects_dir: str
     logfile: str
     started_at: float
+    audit_log: str
 
 
 class ServerInfo:
     def __init__(
         self, pid: int, port: int, projects_dir: str, logfile: str,
-        started_at: float, proc: subprocess.Popen
+        started_at: float, audit_log: str, proc: subprocess.Popen
     ):
         self.pid = pid
         self.port = port
         self.projects_dir = projects_dir
         self.logfile = logfile
         self.started_at = started_at
+        self.audit_log = audit_log
         self.proc = proc
 
     def to_dict(self) -> ServerInfoDict:
@@ -53,6 +55,7 @@ class ServerInfo:
             projects_dir=self.projects_dir,
             logfile=self.logfile,
             started_at=self.started_at,
+            audit_log=self.audit_log,
         )
 
 
@@ -218,15 +221,22 @@ class ServerDaemon:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         return path
 
+    def _audit_log_path_for(self, port: int, timestamp: str) -> str:
+        path = os.path.expanduser(f'~/.mcp-grok/{timestamp}_{port}_audit.log')
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        return path
+
     def _start_server_proc(self, port: int, projects_dir: Optional[str] = None) -> ServerInfo:
         now = datetime.datetime.now()
         started_at = now.timestamp()
         timestamp_str = now.strftime("%Y%m%d_%H%M%S")
         projects_dir = projects_dir or config.projects_dir
         logfile = self._log_path_for(port, timestamp_str)
+        audit_logfile = self._audit_log_path_for(port, timestamp_str)
         logf = open(logfile, "a+")
         cmd = [
             "mcp-grok-server", "--port", str(port), "--projects-dir", projects_dir,
+            "--audit-log", audit_logfile,
         ]
         proc = subprocess.Popen(cmd, stdout=logf, stderr=logf, start_new_session=True)
         info = ServerInfo(
@@ -235,6 +245,7 @@ class ServerDaemon:
             projects_dir=projects_dir,
             logfile=logfile,
             started_at=started_at,
+            audit_log=audit_logfile,
             proc=proc
         )
         with self._servers_lock:
