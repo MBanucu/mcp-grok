@@ -348,7 +348,7 @@ def run_daemon(host: str = "127.0.0.1", port: int = DEFAULT_DAEMON_PORT) -> None
     daemon.run()
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(
         prog="mcp-grok-daemon",
         description="MCP Daemon for managing mcp-grok-server processes"
@@ -367,3 +367,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     run_daemon(host=args.host, port=args.port)
+
+
+if __name__ == "__main__":
+    main()

@@ -13,7 +13,7 @@ dependencies = [
 [project.scripts]
 mcp-grok-server = "mcp_grok.mcp_grok_server:main"
 mcp-grok-menu = "menu.menu:main"
-mcp-grok-daemon = "mcp_grok.server_daemon:run_daemon"
+mcp-grok-daemon = "mcp_grok.server_daemon:main"
 
 [project.optional-dependencies]
 typecheck = ["pyright"]
