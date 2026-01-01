@@ -214,7 +214,7 @@ class ServerDaemon:
         self.httpd: Optional[HTTPServer] = None
 
     def _log_path_for(self, port: int, timestamp: str) -> str:
-        path = os.path.expanduser(f'~/.mcp-grok/daemon_{port}_{timestamp}.log')
+        path = os.path.expanduser(f'~/.mcp-grok/{timestamp}_{port}_server.log')
         os.makedirs(os.path.dirname(path), exist_ok=True)
         return path
 
