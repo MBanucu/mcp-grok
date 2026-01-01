@@ -1,11 +1,13 @@
 """
 Minimal server daemon for managing mcp-grok-server subprocesses.
 
-Exposes a JSON HTTP API (start, stop, list, stop_all) for process/port
-lifecycle management, without global mutable state.
+Exposes a JSON HTTP API (start, stop, list, stop_all)
+for process/port lifecycle management, without global
+mutable state.
 
-All request handlers are constructed with the controlling ServerDaemon instance via
-make_handler(daemon). This ensures correct modularity and testability, and avoids
+All request handlers are constructed with the controlling
+ServerDaemon instance via make_handler(daemon). This
+ensures correct modularity and testability, and avoids
 nonstandard HTTPServer hacks.
 
 Intended for use by tests via mcp_grok.server_client.
@@ -53,10 +55,26 @@ class ServerInfo:
         )
 
 
+def parse_start_params(payload: dict):
+    port = int(payload.get("port") or 0)
+    projects_dir = payload.get("projects_dir")
+    if not port:
+        return 0, projects_dir, "port required"
+    return port, projects_dir, None
+
+def do_start_server(handler, port, projects_dir):
+    try:
+        info = handler.daemon._start_server_proc(port, projects_dir)
+        return handler._send_json(200, {"result": info.to_dict()})
+    except Exception as e:
+        return handler._send_json(500, {"error": str(e)})
+
 def make_handler(daemon):
-    """Factory returning a handler class bound to provided daemon instance.
+    """
+    Factory returning a handler class bound to provided daemon instance.
     This binds 'self.daemon' in each request handler instance, using closure scope,
-    and avoids nonstandard signature hacks (required for http.server compatibility).
+    and avoids nonstandard signature hacks
+    (required for http.server compatibility).
     """
     class ServerDaemonHandler(BaseHTTPRequestHandler):
 
@@ -88,15 +106,10 @@ def make_handler(daemon):
                 return {}
 
         def _handle_start(self, payload: dict):
-            port = int(payload.get("port") or 0)
-            projects_dir = payload.get("projects_dir")
-            if not port:
-                return self._send_json(400, {"error": "port required"})
-            try:
-                info = self.daemon._start_server_proc(port, projects_dir)
-                return self._send_json(200, {"result": info.to_dict()})
-            except Exception as e:
-                return self._send_json(500, {"error": str(e)})
+            port, projects_dir, error = parse_start_params(payload)
+            if error:
+                return self._send_json(400, {"error": error})
+            return do_start_server(self, port, projects_dir)
 
         def _handle_stop_all(self):
             count = self.daemon._stop_all()
@@ -111,21 +124,44 @@ def make_handler(daemon):
             return
 
         def _handle_server_stop(self, payload: dict):
+            pid, port, error = self._parse_stop_server_params(payload)
+            if error:
+                return self._send_json(400, {"error": error})
+            if pid is not None:
+                return self._do_server_stop_by_pid(pid)
+            if port is not None:
+                return self._do_server_stop_by_port(port)
+            return self._send_json(400, {"error": "No valid pid or port provided"})
+
+        def _parse_stop_server_params(self, payload: dict):
             pid = payload.get("pid")
             port = payload.get("port")
-            ok = False
             if pid is not None:
                 try:
-                    ok = self.daemon._stop_server_proc_by_pid(int(pid))
+                    pid = int(pid)
                 except Exception:
-                    ok = False
-            elif port is not None:
+                    pid = None
+            if port is not None:
                 try:
-                    ok = self.daemon._stop_server_proc_by_port(int(port))
+                    port = int(port)
                 except Exception:
-                    ok = False
-            else:
-                return self._send_json(400, {"error": "pid or port required"})
+                    port = None
+            if pid is None and port is None:
+                return None, None, "pid or port required"
+            return pid, port, None
+
+        def _do_server_stop_by_pid(self, pid: int):
+            try:
+                ok = self.daemon._stop_server_proc_by_pid(pid)
+            except Exception:
+                ok = False
+            return self._send_json(200, {"result": bool(ok)})
+
+        def _do_server_stop_by_port(self, port: int):
+            try:
+                ok = self.daemon._stop_server_proc_by_port(port)
+            except Exception:
+                ok = False
             return self._send_json(200, {"result": bool(ok)})
 
         def do_POST(self):
@@ -141,12 +177,27 @@ def make_handler(daemon):
             return self._send_json(404, {"error": "not found"})
 
         def log_message(self, format, *args):
-
             return
+
+    # End of ServerDaemonHandler
 
     return ServerDaemonHandler
 
 # The server always uses an instance-bound handler via make_handler(self).
+
+def parse_start_params(payload: dict):
+    port = int(payload.get("port") or 0)
+    projects_dir = payload.get("projects_dir")
+    if not port:
+        return 0, projects_dir, "port required"
+    return port, projects_dir, None
+
+def do_start_server(handler, port, projects_dir):
+    try:
+        info = handler.daemon._start_server_proc(port, projects_dir)
+        return handler._send_json(200, {"result": info.to_dict()})
+    except Exception as e:
+        return handler._send_json(500, {"error": str(e)})
 
 
 class ServerDaemonHTTPServer(HTTPServer):
@@ -200,22 +251,23 @@ class ServerDaemon:
         with self._servers_lock:
             info = self._servers.get(pid)
         if not info:
-            try:
-                os.kill(pid, signal.SIGTERM)
-                return True
-            except Exception:
-                return False
+            return self._os_kill_pid(pid)
+        return self._stop_info_proc(pid, info)
+
+    def _os_kill_pid(self, pid: int) -> bool:
+        try:
+            os.kill(pid, signal.SIGTERM)
+            return True
+        except Exception:
+            return False
+
+    def _stop_info_proc(self, pid: int, info) -> bool:
         try:
             proc_obj = getattr(info, 'proc', None)
             if proc_obj is not None:
-                if proc_obj.poll() is None:
-                    proc_obj.terminate()
-                    try:
-                        proc_obj.wait(timeout=2)
-                    except Exception:
-                        proc_obj.kill()
+                return self._terminate_proc_obj(proc_obj)
             else:
-                os.kill(pid, signal.SIGTERM)
+                self._os_kill_pid(pid)
                 time.sleep(0.2)
                 try:
                     os.kill(pid, 0)
@@ -228,6 +280,18 @@ class ServerDaemon:
             with self._servers_lock:
                 self._servers.pop(pid, None)
         return True
+
+    def _terminate_proc_obj(self, proc_obj):
+        try:
+            if proc_obj.poll() is None:
+                proc_obj.terminate()
+                try:
+                    proc_obj.wait(timeout=2)
+                except Exception:
+                    proc_obj.kill()
+            return True
+        except Exception:
+            return False
 
     def _stop_server_proc_by_port(self, port: int) -> bool:
         with self._servers_lock:
