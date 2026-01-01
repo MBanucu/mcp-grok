@@ -1,3 +1,4 @@
+import os
 import socket
 import time
 import threading
@@ -147,6 +148,10 @@ def test_daemon_start_list_stop(monkeypatch, tmp_path):
         info = resp["result"]
         pid = info["pid"]
         print(f"Managed server PID: {pid}")
+        # Test that logfile is created
+        logfile = info["logfile"]
+        assert os.path.exists(logfile), f"Logfile {logfile} was not created"
+        assert os.path.isfile(logfile), f"Logfile {logfile} is not a file"
         listing = server_client.list_servers(daemon_port=daemon_port)
         print(f"server list after start: {listing}")
         assert str(pid) in listing.get("servers", {})
