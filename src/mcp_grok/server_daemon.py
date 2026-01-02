@@ -93,11 +93,22 @@ class ServerDaemon:
             self._servers[proc.pid] = info
         return info
 
-    def _start_proxy_proc(self, port: int) -> ProxyInfo:
+    def _start_proxy_proc(self, port: int, config_json=None) -> ProxyInfo:
         now = datetime.datetime.now()
         started_at = now.timestamp()
         logfile = self._log_path_for(port, now.strftime("%Y%m%d_%H%M%S"))
-        proxy_manager = ProxyManager(port=port)
+        config_path = None
+        if config_json:
+            import tempfile
+            import json
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                if isinstance(config_json, str):
+                    config_data = json.loads(config_json)
+                else:
+                    config_data = config_json
+                json.dump(config_data, f)
+                config_path = f.name
+        proxy_manager = ProxyManager(config_path=config_path, port=port)
         proc = proxy_manager.start_proxy()
         info = ProxyInfo(
             pid=proc.pid,
@@ -105,7 +116,8 @@ class ServerDaemon:
             logfile=logfile,
             started_at=started_at,
             proc=proc,
-            proxy_manager=proxy_manager
+            proxy_manager=proxy_manager,
+            config_path=config_path
         )
         with self._proxies_lock:
             self._proxies[proc.pid] = info
@@ -125,6 +137,8 @@ class ServerDaemon:
         except Exception:
             return False
         finally:
+            if info.config_path and os.path.exists(info.config_path):
+                os.unlink(info.config_path)
             with self._proxies_lock:
                 self._proxies.pop(pid, None)
 

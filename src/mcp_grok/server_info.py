@@ -45,7 +45,7 @@ class ServerInfo:
 class ProxyInfo:
     def __init__(
         self, pid: int, port: int, logfile: str,
-        started_at: float, proc: subprocess.Popen, proxy_manager
+        started_at: float, proc: subprocess.Popen, proxy_manager, config_path=None
     ):
         self.pid = pid
         self.port = port
@@ -53,6 +53,7 @@ class ProxyInfo:
         self.started_at = started_at
         self.proc = proc
         self.proxy_manager = proxy_manager
+        self.config_path = config_path
 
     def to_dict(self) -> ProxyInfoDict:
         return ProxyInfoDict(
