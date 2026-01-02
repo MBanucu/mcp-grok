@@ -109,7 +109,8 @@ The server exposes these tools via JSON-RPC:
 - `change_active_project(project_name: str)` - Switch projects
 - `list_all_projects()` - List all projects
 - `get_active_project()` - Get current project info
-- File operations: `read_file`, `write_file`, `delete_file`, `insert_content`, `replace_content`
+- `read_file(file_path: str, ...)` - Read file content
+- `write_file(file_path: str, content: str, ...)` - Write/update file (supports overwrite, insert_at_line, replace_lines_start/end, replaceAll parameters)
 
 ## Security Considerations
 
@@ -189,7 +190,7 @@ nix develop .#menuSuppressed --command python -m pytest tests/test_shell_feature
 ## Additional Notes
 
 - Tests launch the server in a subprocess and clean up automatically
-- The server listens on configured port (default varies)
+- The server listens on configured port (default: 8000)
 - API endpoint typically at `/mcp` (e.g., `http://localhost:8000/mcp`)
 - All session events logged to stdout and `server_audit.log`
 - Update both this file and README.md when making significant changes
