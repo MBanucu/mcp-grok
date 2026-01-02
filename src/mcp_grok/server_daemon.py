@@ -50,17 +50,6 @@ def parse_start_params(
     return port, projects_dir, None
 
 
-def do_start_server(
-    handler: 'ServerDaemonHandler', port: int, projects_dir: Optional[str]
-) -> None:
-    assert port is not None
-    try:
-        info = handler.daemon._start_server_proc(cast(int, port), projects_dir)
-        return handler._send_json(200, {"result": info.to_dict()})
-    except Exception as e:
-        return handler._send_json(500, {"error": str(e)})
-
-
 class ServerDaemonHTTPServer(HTTPServer):
 
     def __init__(self, server_address, RequestHandlerClass, daemon: 'ServerDaemon') -> None:

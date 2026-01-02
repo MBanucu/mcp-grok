@@ -39,12 +39,16 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
             return {}
 
     def _handle_start(self, payload: Dict[str, Any]) -> None:
-        from .server_daemon import parse_start_params, do_start_server
+        from .server_daemon import parse_start_params
         port, projects_dir, error = parse_start_params(payload)
         if error:
             return self._send_json(400, {"error": error})
         assert port is not None  # Since error would have been returned
-        return do_start_server(self, cast(int, port), projects_dir)
+        try:
+            info = self.daemon._start_server_proc(cast(int, port), projects_dir)
+            return self._send_json(200, {"result": info.to_dict()})
+        except Exception as e:
+            return self._send_json(500, {"error": str(e)})
 
     def _handle_stop_all(self) -> None:
         count = self.daemon._stop_all()
