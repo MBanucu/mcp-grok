@@ -71,8 +71,9 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
         port = int(port_raw) if port_raw is not None else 3006  # default port
         if port == 0:
             return self._send_json(400, {"error": "port required"})
+        config_json = payload.get("config")
         try:
-            info = self.daemon._start_proxy_proc(port)
+            info = self.daemon._start_proxy_proc(port, config_json)
             return self._send_json(200, {"result": info.to_dict()})
         except Exception as e:
             return self._send_json(500, {"error": str(e)})
