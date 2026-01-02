@@ -2,6 +2,7 @@ import os
 import subprocess
 
 from mcp_grok.config import config
+from .proxy_manager import ProxyManager
 
 
 def _writable_logfile(preferred):
@@ -20,32 +21,6 @@ def _writable_logfile(preferred):
         except Exception:
             raise RuntimeError(f"Unable to create log file in {preferred} or /tmp")
 
-
-class ProxyManager:
-    def __init__(self, config_path=None, port=3006):
-        self.config_path = config_path
-        self.port = port
-        self.proc = None
-
-    def start_proxy(self):
-        log = open(_writable_logfile(config.proxy_log), "a")
-        cmd = ['superassistant-proxy', '--port', str(self.port)]
-        if self.config_path:
-            cmd.extend(['--config', self.config_path])
-        self.proc = subprocess.Popen(
-            cmd,
-            stdin=subprocess.DEVNULL,
-            stdout=log,
-            stderr=subprocess.STDOUT,
-            close_fds=True,
-            env={**os.environ, 'NO_COLOR': '1'},
-        )
-        return self.proc
-
-    def stop_proxy(self):
-        if self.proc and self.proc.poll() is None:
-            self.proc.terminate()
-            self.proc.wait(timeout=5)
 
 
 def start_proxy(config_path=None, port=3006):
