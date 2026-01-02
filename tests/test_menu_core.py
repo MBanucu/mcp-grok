@@ -34,7 +34,12 @@ def start_stop_proxy():
     Fixture to start/stop the proxy process for tests.
     Returns the process object.
     """
-    proc = menu_core.start_proxy()
+    try:
+        proc = menu_core.start_proxy()
+    except FileNotFoundError as e:
+        raise RuntimeError(f"superassistant-proxy executable not found. Please ensure it is installed and in PATH. Error: {e}")
+    except Exception as e:
+        raise RuntimeError(f"Failed to start superassistant-proxy: {e}")
     yield proc
     menu_core.stop_proxy(proc)
 

@@ -397,12 +397,48 @@ def _gather_with_shell() -> List[Tuple[Optional[int], str, str, Set[int]]]:
     return entries
 
 
+def _get_listen_ports(p):
+    """Get listen ports for a psutil process."""
+    listen_ports = set()
+    try:
+        for c in p.connections(kind='inet'):
+            if c.status == p._ps.CONN_LISTEN and c.laddr:
+                listen_ports.add(c.laddr[1])
+    except Exception:
+        pass
+    return listen_ports
+
+
+def _gather_leftover_processes(
+    patterns: List[str]
+) -> List[Tuple[Optional[int], str, str, Set[int]]]:
+    """Gather entries of leftover processes matching any of the patterns."""
+    entries = []
+    try:
+        import psutil
+        for p in psutil.process_iter():
+            pid = getattr(p, 'pid', None) or p.pid
+            name = (p.name() or '').lower()
+            cmdline = ' '.join(p.cmdline() or []).lower()
+            if any(pat in name or pat in cmdline for pat in patterns):
+                listen_ports = _get_listen_ports(p)
+                entries.append((pid, name, cmdline, listen_ports))
+    except ImportError:
+        # Fallback to shell
+        pgrep_patterns = '|'.join(patterns)
+        out = subprocess.run(['pgrep', '-af', pgrep_patterns], capture_output=True, text=True)
+        for line in out.stdout.splitlines():
+            if line.strip():
+                parts = line.strip().split(None, 1)
+                pid = int(parts[0])
+                cmdline = parts[1] if len(parts) > 1 else ''
+                entries.append((pid, '', cmdline, set()))
+    return entries
+
+
 def _gather_leftover_entries() -> List[Tuple[Optional[int], str, str, Set[int]]]:
     """Gather entries of leftover mcp-grok-server processes."""
-    try:
-        return _gather_with_psutil()
-    except ImportError:
-        return _gather_with_shell()
+    return _gather_leftover_processes(['mcp-grok-server', 'mcp_grok.mcp_grok_server'])
 
 
 def _kill_untracked(leftover_entries: List[Tuple[Optional[int], str, str, Set[int]]],
@@ -438,38 +474,7 @@ def cleanup_leftover_servers():
 
 def _gather_leftover_daemons() -> List[Tuple[Optional[int], str, str, Set[int]]]:
     """Gather entries of leftover mcp-grok-daemon processes."""
-    entries = []
-    try:
-        import psutil
-        for p in psutil.process_iter():
-            try:
-                pid = getattr(p, 'pid', None) or p.pid
-                name = (p.name() or '').lower()
-                cmdline = ' '.join(p.cmdline() or []).lower()
-                if 'mcp-grok-daemon' in name or 'mcp-grok-daemon' in cmdline or 'mcp_grok.server_daemon' in cmdline:
-                    listen_ports = set()
-                    try:
-                        for c in p.connections(kind='inet'):
-                            if c.status == psutil.CONN_LISTEN and c.laddr:
-                                listen_ports.add(c.laddr[1])
-                    except Exception:
-                        pass
-                    entries.append((pid, name, cmdline, listen_ports))
-            except Exception:
-                pass
-    except ImportError:
-        # Fallback to shell
-        try:
-            out = subprocess.run(['pgrep', '-af', 'mcp-grok-daemon'], capture_output=True, text=True)
-            for line in out.stdout.splitlines():
-                if line.strip():
-                    parts = line.strip().split(None, 1)
-                    pid = int(parts[0])
-                    cmdline = parts[1] if len(parts) > 1 else ''
-                    entries.append((pid, '', cmdline, set()))
-        except Exception:
-            pass
-    return entries
+    return _gather_leftover_processes(['mcp-grok-daemon', 'mcp_grok.server_daemon'])
 
 
 def cleanup_leftover_daemons():
