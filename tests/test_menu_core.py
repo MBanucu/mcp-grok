@@ -1,5 +1,4 @@
 import os
-import shutil
 import time
 import pytest
 import socket
@@ -35,7 +34,12 @@ def start_stop_proxy():
     Fixture to start/stop the proxy process for tests.
     Returns the process object.
     """
-    proc = menu_core.start_proxy()
+    try:
+        proc = menu_core.start_proxy()
+    except FileNotFoundError as e:
+        raise RuntimeError(f"superassistant-proxy executable not found. Please ensure it is installed and in PATH. Error: {e}")
+    except Exception as e:
+        raise RuntimeError(f"Failed to start superassistant-proxy: {e}")
     yield proc
     menu_core.stop_proxy(proc)
 
@@ -58,12 +62,10 @@ def test_server_log(start_stop_server):
     wait_for_log(log_path, timeout=10.0)
 
 
-@pytest.mark.skipif(not shutil.which('superassistant-proxy'), reason="superassistant-proxy not available")
 def test_proxy_log(start_stop_proxy):
     wait_for_log(config.proxy_log, timeout=30.0)
 
 
-@pytest.mark.skipif(not shutil.which('superassistant-proxy'), reason="superassistant-proxy not available")
 def test_proxy_log_config_error(start_stop_proxy):
     """
     Fail on config error after proxy start. Print log for success marker.
