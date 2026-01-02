@@ -25,7 +25,7 @@ import time
 import datetime
 import argparse
 from typing import (
-    Dict, Any, Optional, Tuple, List, Set, cast
+    Dict, Optional, Tuple, List, Set, cast
 )
 
 from .server_info import ServerInfo, ServerInfoDict
