@@ -55,7 +55,27 @@ def pytest_runtest_teardown(item, nextitem):
             _test_leaks.append((item.nodeid, details))
 
 
+_initial_daemons = set()
+
+
+def pytest_sessionstart(session):
+    from mcp_grok.server_daemon import _gather_leftover_daemons
+    global _initial_daemons
+    _initial_daemons = {pid for pid, _, _, _ in _gather_leftover_daemons() if pid is not None}
+
+
 def pytest_sessionfinish(session, exitstatus):
+    # Check daemon cleanup
+    from mcp_grok.server_daemon import _gather_leftover_daemons, cleanup_leftover_daemons
+    final_daemons = {pid for pid, _, _, _ in _gather_leftover_daemons() if pid is not None}
+    extra_daemons = final_daemons - _initial_daemons
+    if extra_daemons:
+        cleanup_leftover_daemons()
+        # Check again after cleanup
+        final_daemons_after = {pid for pid, _, _, _ in _gather_leftover_daemons() if pid is not None}
+        extra_daemons_after = final_daemons_after - _initial_daemons
+        if extra_daemons_after:
+            raise RuntimeError(f"Daemons left running after cleanup: {extra_daemons_after}")
     if _test_leaks:
         lines = [
             "Detected tests that started mcp-grok-server processes and did not stop them:"]

@@ -21,10 +21,18 @@ def _writable_logfile(preferred):
             raise RuntimeError(f"Unable to create log file in {preferred} or /tmp")
 
 
-def start_proxy():
+def start_proxy(config_path=None):
     log = open(_writable_logfile(config.proxy_log), "a")
+    # Find a free port for the proxy
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('', 0))
+        port = s.getsockname()[1]
+    cmd = ['superassistant-proxy', '--port', str(port)]
+    if config_path:
+        cmd.extend(['--config', config_path])
     proc = subprocess.Popen(
-        ['superassistant-proxy'],
+        cmd,
         stdin=subprocess.DEVNULL,
         stdout=log,
         stderr=subprocess.STDOUT,
@@ -37,10 +45,7 @@ def start_proxy():
 def stop_proxy(proc):
     if proc and proc.poll() is None:
         proc.terminate()
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
+        proc.wait(timeout=5)
 
 
 def clear_log(log_path):

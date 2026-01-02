@@ -1,5 +1,6 @@
 import os
 import re
+import traceback
 from typing import Optional
 import asyncio
 from prompt_toolkit.shortcuts import message_dialog
@@ -10,6 +11,7 @@ from prompt_toolkit.layout.containers import WindowAlign
 from prompt_toolkit.key_binding import KeyBindings
 from . import menu_core
 from mcp_grok.config import config
+from mcp_grok import server_client
 from .menu_state import MenuState
 
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
@@ -83,9 +85,22 @@ async def show_log_scrollable_dialog(content: str, title: str, log_path=None):
     def close_(event):
         event.app.exit()
 
-    header = Label(text=title + ' (Scroll: ↑↓ PgUp/PgDn, q/Esc to close)', style="reverse", dont_extend_height=True)
+    @kb.add('c')
+    def copy_all(event):
+        # Copy all text to system clipboard
+        import subprocess
+        try:
+            subprocess.run(['xclip', '-selection', 'clipboard'], input=content, text=True, check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Fallback to prompt_toolkit clipboard
+            clipboard = event.app.clipboard
+            if clipboard:
+                clipboard.set_text(content)
+
+    header = Label(text=title + ' (Scroll: ↑↓ PgUp/PgDn, c to copy all, q/Esc to close)',
+                   style="reverse", dont_extend_height=True)
     footer = Label(
-        text="Press ↑, ↓, PgUp, PgDn to scroll; q or Esc to close.",
+        text="Press ↑, ↓, PgUp, PgDn to scroll; c to copy all text; q or Esc to close.",
         style="reverse",
         dont_extend_height=True,
     )
@@ -231,14 +246,14 @@ class MenuApp:
             os.system("code .")
         elif value == 'shell':
             print("Starting interactive shell. Type 'exit' to leave.")
-            self.state.stop_mcp()
             self.state.stop_proxy()
+            self.state.stop_mcp()
             shell = os.environ.get("SHELL", "/bin/sh")
             os.execvp(shell, [shell])
         elif value == 'exit' or value is None:
             print("Exiting...")
-            self.state.stop_mcp()
             self.state.stop_proxy()
+            self.state.stop_mcp()
             return False
         return True
 
@@ -256,41 +271,41 @@ class MenuApp:
             self.state.stop_proxy()
         return True
 
-    def _find_latest_audit_log(self):
-        import glob
-        import os
-        pattern = os.path.expanduser('~/.mcp-grok/*_audit.log')
-        candidates = glob.glob(pattern)
-        if not candidates:
-            return None
-        # Sort by mtime (most recent first)
-        candidates.sort(key=lambda f: os.path.getmtime(f), reverse=True)
-        return candidates[0]
+    def _get_server_log_path(self, log_type: str) -> Optional[str]:
+        """Get log path from daemon API. log_type: 'server' or 'audit'."""
+        resp = server_client.list_servers()
+        servers = resp.get("servers", {})
+        for pid, info in servers.items():
+            if info.get("port") == config.port:
+                if log_type == 'server':
+                    return info.get("logfile")
+                elif log_type == 'audit':
+                    return info.get("audit_log")
+        return None
+
+    def _show_log_error(self, log_type: str, e: Exception) -> None:
+        """Show log retrieval error in dialog."""
+        error_content = f"Error retrieving {log_type} logs: {e}\n\nFull traceback:\n{traceback.format_exc()}"
+        asyncio.run(show_log_scrollable_dialog(error_content, f"{log_type.title()} Log Retrieval Error"))
 
     def _handle_log_action(self, value: Optional[str]) -> bool:
-        if value == 'logs_mcp':
-            show_log(os.path.expanduser(f'~/.mcp-grok/{config.log_timestamp}_{config.port}_mcp-shell.log'), "MCP Shell Logs")
-        elif value == 'clear_logs_mcp':
-            show_log(os.path.expanduser(
-                f'~/.mcp-grok/{config.log_timestamp}_{config.port}_mcp-shell.log'), "MCP Shell Log", clear=True)
+        if value in ('logs_mcp', 'clear_logs_mcp', 'logs_audit', 'clear_logs_audit'):
+            log_type = 'server' if 'mcp' in value else 'audit'
+            clear = 'clear' in value
+            title = f"{'MCP Server' if log_type == 'server' else 'Audit'} Log{'s' if not clear else ''}"
+            try:
+                log_path = self._get_server_log_path(log_type)
+                if log_path:
+                    show_log(log_path, title, clear=clear)
+                    return True
+                else:
+                    self._show_log_error(log_type, RuntimeError(f"No {log_type} log found for server on port {config.port}"))
+                    return True
+            except Exception as e:
+                self._show_log_error(log_type, e)
+                return True
         elif value == 'logs_proxy':
             show_log(config.proxy_log, "SuperAssistant Proxy Logs")
         elif value == 'clear_logs_proxy':
             show_log(config.proxy_log, "Proxy Log", clear=True)
-        elif value == 'logs_audit':
-            logf = self._find_latest_audit_log()
-            print("Latest audit log file:", logf)
-            if logf:
-                show_log(logf, "Audit Log")
-            else:
-                from prompt_toolkit.shortcuts import message_dialog
-                message_dialog(title="Audit Log", text="No audit log files found.").run()
-        elif value == 'clear_logs_audit':
-            logf = self._find_latest_audit_log()
-            print("Latest audit log file for clear:", logf)
-            if logf:
-                show_log(logf, "Audit Log", clear=True)
-            else:
-                from prompt_toolkit.shortcuts import message_dialog
-                message_dialog(title="Audit Log", text="No audit log files found to clear.").run()
         return True

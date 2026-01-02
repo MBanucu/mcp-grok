@@ -4,4 +4,9 @@ SCRIPT_PATH="$(realpath "$0")"
 SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
 CONFIG_PATH="$SCRIPT_DIR/config.json"
 
-exec npx @srbhptl39/mcp-superassistant-proxy@latest --config "$CONFIG_PATH" --outputTransport sse "$@"
+# Check if --config is already in arguments
+if echo "$@" | grep -q -- '--config'; then
+    exec npx @srbhptl39/mcp-superassistant-proxy@latest --outputTransport sse "$@"
+else
+    exec npx @srbhptl39/mcp-superassistant-proxy@latest --config "$CONFIG_PATH" --outputTransport sse "$@"
+fi

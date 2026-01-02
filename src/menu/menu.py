@@ -165,8 +165,8 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\nInterrupted.")
         if state:
-            state.stop_mcp()
             state.stop_proxy()
+            state.stop_mcp()
             state.stop_daemon()
 
 
