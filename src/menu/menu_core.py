@@ -1,7 +1,5 @@
 import os
-import subprocess
-
-from mcp_grok.config import config
+from .proxy_manager import ProxyManager
 
 
 def _writable_logfile(preferred):
@@ -22,25 +20,9 @@ def _writable_logfile(preferred):
 
 
 def start_proxy(config_path=None, port=3006):
-    log = open(_writable_logfile(config.proxy_log), "a")
-    cmd = ['superassistant-proxy', '--port', str(port)]
-    if config_path:
-        cmd.extend(['--config', config_path])
-    proc = subprocess.Popen(
-        cmd,
-        stdin=subprocess.DEVNULL,
-        stdout=log,
-        stderr=subprocess.STDOUT,
-        close_fds=True,
-        env={**os.environ, 'NO_COLOR': '1'},
-    )
-    return proc
-
-
-def stop_proxy(proc):
-    if proc and proc.poll() is None:
-        proc.terminate()
-        proc.wait(timeout=5)
+    manager = ProxyManager(config_path, port)
+    manager.start_proxy()
+    return manager
 
 
 def clear_log(log_path):

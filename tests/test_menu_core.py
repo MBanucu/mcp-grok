@@ -45,14 +45,15 @@ def start_stop_proxy(mcp_server):
         port = s.getsockname()[1]
 
     try:
-        proc = menu_core.start_proxy(config_path=config_path, port=port)
-        print(f"Started proxy with PID: {proc.pid}")
+        manager = menu_core.start_proxy(config_path=config_path, port=port)
+        assert manager.proc is not None
+        print(f"Started proxy with PID: {manager.proc.pid}")
     except FileNotFoundError as e:
         raise RuntimeError(f"superassistant-proxy executable not found. Please ensure it is installed and in PATH. Error: {e}")
     except Exception as e:
         raise RuntimeError(f"Failed to start superassistant-proxy: {e}")
-    yield proc
-    menu_core.stop_proxy(proc)
+    yield manager.proc
+    manager.stop_proxy()
     # Clean up temp file
     os.unlink(config_path)
 
