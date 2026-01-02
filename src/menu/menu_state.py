@@ -75,7 +75,11 @@ class MenuState:
         self.mcp_running = False
 
     def is_proxy_running(self) -> bool:
-        return self.proxy_manager is not None and self.proxy_manager.proc is not None and self.proxy_manager.proc.poll() is None
+        return (
+            self.proxy_manager is not None and
+            self.proxy_manager.proc is not None and
+            self.proxy_manager.proc.poll() is None
+        )
 
     def start_proxy(self):
         if not self.is_proxy_running():

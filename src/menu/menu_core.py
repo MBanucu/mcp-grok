@@ -1,7 +1,4 @@
 import os
-import subprocess
-
-from mcp_grok.config import config
 from .proxy_manager import ProxyManager
 
 
@@ -20,7 +17,6 @@ def _writable_logfile(preferred):
             return fallback
         except Exception:
             raise RuntimeError(f"Unable to create log file in {preferred} or /tmp")
-
 
 
 def start_proxy(config_path=None, port=3006):
