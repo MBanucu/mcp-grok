@@ -3,6 +3,15 @@ import time
 from .daemon_manager import DaemonManager
 
 class ProcessMonitor:
+    """
+    Monitors process lifecycle during pytest sessions to detect leaks.
+
+    Usage in pytest fixtures:
+    - In pytest_sessionstart: _monitor.start()
+    - In pytest_sessionfinish: _monitor.stop(); _monitor.print_history()
+
+    The print_history method will highlight leaking processes (those created but not terminated).
+    """
     def __init__(self):
         self.history = []
         self.thread = None
