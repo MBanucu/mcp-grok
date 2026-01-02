@@ -46,15 +46,14 @@ class ProxyManager:
             self.proc.wait(timeout=5)
 
 
-_proxy_manager = ProxyManager()
-
-
 def start_proxy(config_path=None, port=3006):
-    return _proxy_manager.start_proxy(config_path, port)
+    manager = ProxyManager()
+    manager.start_proxy(config_path, port)
+    return manager
 
 
-def stop_proxy(proc):
-    _proxy_manager.stop_proxy()
+def stop_proxy(manager):
+    manager.stop_proxy()
 
 
 def clear_log(log_path):

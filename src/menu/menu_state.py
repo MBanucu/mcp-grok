@@ -2,6 +2,7 @@ import subprocess
 import time
 from typing import Optional
 from . import menu_core
+from .menu_core import ProxyManager
 from mcp_grok import server_client
 from mcp_grok.config import config
 
@@ -13,7 +14,7 @@ class MenuState:
 
     def __init__(self):
         self.mcp_running: bool = False
-        self.proxy_proc: Optional[subprocess.Popen] = None
+        self.proxy_manager: Optional[ProxyManager] = None
         # Check if daemon is already running
         try:
             server_client.list_servers()
@@ -74,15 +75,16 @@ class MenuState:
         self.mcp_running = False
 
     def is_proxy_running(self) -> bool:
-        return self.proxy_proc is not None and self.proxy_proc.poll() is None
+        return self.proxy_manager is not None and self.proxy_manager.proc is not None and self.proxy_manager.proc.poll() is None
 
     def start_proxy(self):
         if not self.is_proxy_running():
-            self.proxy_proc = menu_core.start_proxy()
+            self.proxy_manager = menu_core.start_proxy()
 
     def stop_proxy(self):
-        menu_core.stop_proxy(self.proxy_proc)
-        self.proxy_proc = None
+        if self.proxy_manager:
+            self.proxy_manager.stop_proxy()
+        self.proxy_manager = None
 
     def stop_daemon(self):
         try:
