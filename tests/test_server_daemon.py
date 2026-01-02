@@ -6,6 +6,7 @@ import subprocess
 import re
 import urllib.request
 import json
+import psutil
 import pytest
 from mcp_grok import server_daemon
 from mcp_grok import server_client
@@ -127,6 +128,15 @@ def _wait_for_port(port, timeout=3.0):
             return False
 
 
+def _wait_for_process_exit(pid, timeout=2.0):
+    """Wait for a process to exit using psutil."""
+    try:
+        p = psutil.Process(pid)
+        p.wait(timeout=timeout)
+    except psutil.NoSuchProcess:
+        pass  # Already exited
+
+
 def test_daemon_start_list_stop(monkeypatch, tmp_path):
     daemon_port = pick_free_port()
     server_port = pick_free_port()
@@ -134,41 +144,50 @@ def test_daemon_start_list_stop(monkeypatch, tmp_path):
         'mcp-grok-daemon',
         '--host', '127.0.0.1', '--port', str(daemon_port)
     ])
-    print(f"Waiting for daemon on port {daemon_port}...")
-    assert _wait_for_port(daemon_port), "Daemon did not start in time"
-    print(f"Starting managed server on port {server_port}")
-    resp = server_client.start_server(
-        port=server_port,
-        projects_dir=str(tmp_path),
-        daemon_port=daemon_port
-    )
-    print(f"start_server resp: {resp}")
-    assert isinstance(resp, dict) and "result" in resp
-    info = resp["result"]
-    pid = info["pid"]
-    print(f"Managed server PID: {pid}")
-    # Test that logfile is created
-    logfile = info["logfile"]
-    assert os.path.exists(logfile), f"Logfile {logfile} was not created"
-    assert os.path.isfile(logfile), f"Logfile {logfile} is not a file"
-    listing = server_client.list_servers(daemon_port=daemon_port)
-    print(f"server list after start: {listing}")
-    assert str(pid) in listing.get("servers", {})
-    stop_resp = server_client.stop_managed_server(
-        pid=pid,
-        daemon_port=daemon_port
-    )
-    print(f"stop_managed_server resp: {stop_resp}")
-    listing_post = server_client.list_servers(daemon_port=daemon_port)
-    print(f"servers listing after stop: {listing_post}")
-    # The old server_daemon._SERVERS direct access is removed; use server list endpoint instead.
-    assert stop_resp.get("result") is True
-    stopd = server_client.stop_daemon(daemon_port=daemon_port)
-    print(f"daemon stop resp: {stopd}")
-    assert stopd.get("result") == "stopping"
-    proc.wait(timeout=5)
-    print(f"Daemon proc poll: {proc.poll()}")
-    assert proc.poll() is not None, "Daemon process did not exit"
+    try:
+        print(f"Waiting for daemon on port {daemon_port}...")
+        assert _wait_for_port(daemon_port), "Daemon did not start in time"
+        print(f"Starting managed server on port {server_port}")
+        resp = server_client.start_server(
+            port=server_port,
+            projects_dir=str(tmp_path),
+            daemon_port=daemon_port
+        )
+        print(f"start_server resp: {resp}")
+        assert isinstance(resp, dict) and "result" in resp
+        info = resp["result"]
+        pid = info["pid"]
+        print(f"Managed server PID: {pid}")
+        # Test that logfile is created
+        logfile = info["logfile"]
+        assert os.path.exists(logfile), f"Logfile {logfile} was not created"
+        assert os.path.isfile(logfile), f"Logfile {logfile} is not a file"
+        listing = server_client.list_servers(daemon_port=daemon_port)
+        print(f"server list after start: {listing}")
+        assert str(pid) in listing.get("servers", {})
+        stop_resp = server_client.stop_managed_server(
+            pid=pid,
+            daemon_port=daemon_port
+        )
+        print(f"stop_managed_server resp: {stop_resp}")
+        listing_post = server_client.list_servers(daemon_port=daemon_port)
+        print(f"servers listing after stop: {listing_post}")
+        # The old server_daemon._SERVERS direct access is removed; use server list endpoint instead.
+        assert stop_resp.get("result") is True
+        stopd = server_client.stop_daemon(daemon_port=daemon_port)
+        print(f"daemon stop resp: {stopd}")
+        assert stopd.get("result") == "stopping"
+        proc.wait(timeout=5)
+        print(f"Daemon proc poll: {proc.poll()}")
+        assert proc.poll() is not None, "Daemon process did not exit"
+    finally:
+        # Ensure the daemon process is terminated even if assertions fail
+        if proc.poll() is None:
+            try:
+                proc.kill()
+                proc.wait()
+            except Exception:
+                pass  # Best-effort cleanup
 
 
 def test_start_server_runs_and_stops(server_daemon_proc):
@@ -191,12 +210,7 @@ def test_start_server_runs_and_stops(server_daemon_proc):
     assert stop_resp.get("result") is True
 
     # Wait for the process to exit
-    import psutil
-    try:
-        p = psutil.Process(pid)
-        p.wait(timeout=2.0)
-    except psutil.NoSuchProcess:
-        pass  # Already exited
+    _wait_for_process_exit(pid)
 
     # Check it's not in the list
     listing_after = server_client.list_servers(daemon_port=daemon_port)
@@ -218,13 +232,7 @@ def test_server_listens_on_specified_port(server_daemon_proc):
 
     # Cleanup
     server_client.stop_managed_server(pid=pid, daemon_port=daemon_port)
-    # Wait for the process to exit
-    import psutil
-    try:
-        p = psutil.Process(pid)
-        p.wait(timeout=2.0)
-    except psutil.NoSuchProcess:
-        pass  # Already exited
+    _wait_for_process_exit(pid)
 
 
 def test_server_exits_on_bad_config(server_daemon_proc):
@@ -240,7 +248,6 @@ def test_server_exits_on_bad_config(server_daemon_proc):
     logfile = info["logfile"]
 
     # Poll for the log to contain permission denied
-    import time
     start = time.time()
     timeout = 2.0
     log_content = ""
@@ -254,23 +261,16 @@ def test_server_exits_on_bad_config(server_daemon_proc):
         assert False, f"Expected 'permission denied' in logs within {timeout}s, got: {log_content}"
 
     # Check that the server does not bind to the privileged port
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        s.connect(('127.0.0.1', bad_port))
-        s.close()
-        assert False, f"Server should not bind to privileged port {bad_port}"
-    except ConnectionRefusedError:
-        pass  # Expected
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.connect(('127.0.0.1', bad_port))
+            assert False, f"Server should not bind to privileged port {bad_port}"
+        except ConnectionRefusedError:
+            pass  # Expected
 
     # Cleanup (server should already be stopped)
     server_client.stop_managed_server(pid=pid, daemon_port=daemon_port)
-    # Wait for the process to exit
-    import psutil
-    try:
-        p = psutil.Process(pid)
-        p.wait(timeout=2.0)
-    except psutil.NoSuchProcess:
-        pass  # Already exited
+    _wait_for_process_exit(pid)
 
 
 def test_server_log(server_daemon_proc):
@@ -289,7 +289,6 @@ def test_server_log(server_daemon_proc):
     assert os.path.isfile(logfile), f"Logfile {logfile} is not a file"
 
     # Poll for log content
-    import time
     start = time.time()
     timeout = 2.0
     log_content = ""
@@ -305,13 +304,7 @@ def test_server_log(server_daemon_proc):
     # Cleanup
     pid = info["pid"]
     server_client.stop_managed_server(pid=pid, daemon_port=daemon_port)
-    # Wait for the process to exit
-    import psutil
-    try:
-        p = psutil.Process(pid)
-        p.wait(timeout=2.0)
-    except psutil.NoSuchProcess:
-        pass  # Already exited
+    _wait_for_process_exit(pid)
 
 
 def test_run_daemon_stop_removes_managed_servers(monkeypatch, tmp_path):

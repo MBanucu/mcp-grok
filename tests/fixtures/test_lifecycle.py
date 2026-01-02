@@ -15,10 +15,11 @@ def _get_tracked_server_pids():
     import json
     tracked = set()
     for proc in psutil.process_iter(attrs=['cmdline']):
-        cmd = ' '.join(proc.info['cmdline'] or [])
-        if 'mcp_grok.server_daemon' in cmd:
+        cmdline = proc.info['cmdline'] or []
+        # Check if 'mcp_grok.server_daemon' or 'mcp-grok-daemon' appears as a complete argument
+        if 'mcp_grok.server_daemon' in cmdline or 'mcp-grok-daemon' in cmdline:
             port = None
-            args = proc.info['cmdline']
+            args = cmdline
             for i in range(len(args) - 1):
                 if args[i] == '--port':
                     port = int(args[i + 1])
@@ -29,6 +30,7 @@ def _get_tracked_server_pids():
                         data = json.load(r)
                         tracked.update(int(p) for p in data.get('servers', {}))
                 except Exception:
+                    # Daemon may not be responsive; skip this daemon
                     pass
     return tracked
 

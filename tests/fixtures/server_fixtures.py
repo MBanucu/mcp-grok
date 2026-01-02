@@ -44,8 +44,17 @@ def server_daemon_proc():
         server_client.stop_daemon(daemon_port=daemon_port)
         proc.wait(timeout=5)
     except Exception:
-        proc.kill()
-        proc.wait()
+        # Ignore here; ensure cleanup in finally
+        pass
+    finally:
+        # Ensure the process is not left running
+        if proc.poll() is None:
+            try:
+                proc.kill()
+                proc.wait()
+            except Exception:
+                # Best-effort cleanup; ignore failures
+                pass
 
 
 @pytest.fixture(scope="session")
