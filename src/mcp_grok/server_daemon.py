@@ -375,7 +375,7 @@ def _gather_with_psutil() -> List[Tuple[Optional[int], str, str, Set[int]]]:
             if 'mcp-grok-server' in name or 'mcp-grok-server' in cmdline or 'mcp_grok.mcp_grok_server' in cmdline:
                 listen_ports = set()
                 try:
-                    for c in p.connections(kind='inet'):
+                    for c in p.net_connections(kind='inet'):
                         if c.status == psutil.CONN_LISTEN and c.laddr:
                             listen_ports.add(c.laddr[1])
                 except Exception:
@@ -406,7 +406,7 @@ def _get_listen_ports(p):
     """Get listen ports for a psutil process."""
     listen_ports = set()
     try:
-        for c in p.connections(kind='inet'):
+        for c in p.net_connections(kind='inet'):
             if c.status == p._ps.CONN_LISTEN and c.laddr:
                 listen_ports.add(c.laddr[1])
     except Exception:
@@ -417,13 +417,16 @@ def _get_listen_ports(p):
 def _get_process_info(p, errors):
     """Get process info with error handling."""
     pid = getattr(p, 'pid', None)
-    name = getattr(p, '_name', '')
+    name = ''
+    try:
+        name = getattr(p, '_name', '')
+    except Exception:
+        name = '<name unavailable>'
     cmdline = ''
     try:
         cmdline = ' '.join(p.cmdline() or [])
-    except Exception as e:
+    except Exception:
         cmdline = '<cmdline unavailable>'
-        errors.append(f"Could not get cmdline for process {pid} ({name}): {e}")
     return pid, name, cmdline
 
 
@@ -431,14 +434,14 @@ def _process_psutil_entry(p, patterns, entries, errors):
     """Process a single psutil process entry."""
     pid, name, cmdline = _get_process_info(p, errors)
     try:
-        if any(pat in name.lower() or pat in cmdline.lower() for pat in patterns):
+        if any(pat in (name or '').lower() or pat in cmdline.lower() for pat in patterns):
             listen_ports = _get_listen_ports(p)
             entries.append((pid, name, cmdline, listen_ports))
     except Exception as e:  # psutil exceptions
         errors.append(f"Error processing process {pid} ({name}, cmdline: {cmdline}): {e}")
 
 
-def _gather_leftover_processes(
+def _gather_running_processes(
     patterns: List[str]
 ) -> List[Tuple[Optional[int], str, str, Set[int]]]:
     """Gather entries of leftover processes matching any of the patterns."""
@@ -463,9 +466,9 @@ def _gather_leftover_processes(
     return entries
 
 
-def _gather_leftover_entries() -> List[Tuple[Optional[int], str, str, Set[int]]]:
+def _gather_running_mcp_server_processes() -> List[Tuple[Optional[int], str, str, Set[int]]]:
     """Gather entries of leftover mcp-grok-server processes."""
-    return _gather_leftover_processes(['mcp-grok-server', 'mcp_grok.mcp_grok_server'])
+    return _gather_running_processes(['mcp-grok-server', 'mcp_grok.mcp_grok_server'])
 
 
 def _kill_untracked(leftover_entries: List[Tuple[Optional[int], str, str, Set[int]]],
@@ -488,10 +491,10 @@ def _kill_untracked(leftover_entries: List[Tuple[Optional[int], str, str, Set[in
     return killed, not_killed
 
 
-def cleanup_leftover_servers():
+def cleanup_running_mcp_server_processes():
     """Clean up leftover mcp-grok-server processes not managed by the daemon."""
     tracked_pids = set()  # Assuming no tracked for daemon, or pass from ServerDaemon
-    leftover_entries = _gather_leftover_entries()
+    leftover_entries = _gather_running_mcp_server_processes()
     killed, not_killed = _kill_untracked(leftover_entries, tracked_pids)
     if killed:
         print(f"Cleaned up {len(killed)} leftover mcp-grok-server processes.")
@@ -499,14 +502,14 @@ def cleanup_leftover_servers():
         print(f"Left {len(not_killed)} processes untouched (e.g., on port 8000).")
 
 
-def _gather_leftover_daemons() -> List[Tuple[Optional[int], str, str, Set[int]]]:
+def _gather_running_daemons() -> List[Tuple[Optional[int], str, str, Set[int]]]:
     """Gather entries of leftover mcp-grok-daemon processes."""
-    return _gather_leftover_processes(['mcp-grok-daemon', 'mcp_grok.server_daemon'])
+    return _gather_running_processes(['mcp-grok-daemon', 'mcp_grok.server_daemon'])
 
 
-def cleanup_leftover_daemons():
+def cleanup_running_daemons():
     """Clean up leftover mcp-grok-daemon processes."""
-    leftover_entries = _gather_leftover_daemons()
+    leftover_entries = _gather_running_daemons()
     killed = []
     not_killed = []
     for pid, name, cmdline, listen_ports in leftover_entries:

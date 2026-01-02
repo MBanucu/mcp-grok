@@ -5,7 +5,7 @@ def _get_listen_ports_from_psutil_proc(p):
     try:
         import psutil as _ps
         ports = set()
-        for c in p.connections(kind='inet'):
+        for c in p.net_connections(kind='inet'):
             if c.status == _ps.CONN_LISTEN and c.laddr and isinstance(c.laddr, tuple):
                 ports.add(c.laddr[1])
         return ports
