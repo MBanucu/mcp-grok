@@ -425,7 +425,7 @@ def _get_process_info(p, errors):
     cmdline = ''
     try:
         cmdline = ' '.join(p.cmdline() or [])
-    except Exception as e:
+    except Exception:
         cmdline = '<cmdline unavailable>'
     return pid, name, cmdline
 
