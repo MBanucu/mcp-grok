@@ -9,18 +9,38 @@ def pytest_runtest_setup(item):
     _test_proc_before[item.nodeid] = set(_find_mcp_procs().keys())
 
 
+def _get_tracked_server_pids():
+    import psutil
+    import urllib.request
+    import json
+    tracked = set()
+    for proc in psutil.process_iter(attrs=['cmdline']):
+        cmd = ' '.join(proc.info['cmdline'] or [])
+        if 'mcp_grok.server_daemon' in cmd:
+            port = None
+            args = proc.info['cmdline']
+            for i in range(len(args) - 1):
+                if args[i] == '--port':
+                    port = int(args[i + 1])
+                    break
+            if port:
+                try:
+                    with urllib.request.urlopen(f"http://127.0.0.1:{port}/list", timeout=1) as r:
+                        data = json.load(r)
+                        tracked.update(int(p) for p in data.get('servers', {}))
+                except Exception:
+                    pass
+    return tracked
+
+
 def pytest_runtest_teardown(item, nextitem):
     from tests.fixtures.process_utils import _find_mcp_procs
     before = _test_proc_before.get(item.nodeid, set())
     after = set(_find_mcp_procs().keys())
     started = after - before
-    try:
-        from menu import menu_core as _menu_core_for_tests
-        tracked = getattr(_menu_core_for_tests.server_manager, '_servers', [])
-        tracked_pids = {entry.get('proc').pid for entry in tracked if entry.get('proc')}
-        started = started - tracked_pids
-    except Exception:
-        pass
+    # Exclude servers managed by running daemons
+    tracked_pids = _get_tracked_server_pids()
+    started = started - tracked_pids
     if started:
         details = []
         all_procs = _find_mcp_procs()

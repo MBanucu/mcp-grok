@@ -1,7 +1,7 @@
 import tempfile
-import threading
+import subprocess
 import pytest
-from mcp_grok import server_daemon, server_client
+from mcp_grok import server_client
 
 
 def pick_free_port():
@@ -18,11 +18,10 @@ def server_daemon_proc():
     daemon_port = pick_free_port()
     projects_dir = tempfile.mkdtemp(prefix="mcp_test_projects_")
 
-    def run_daemon():
-        server_daemon.run_daemon(host="127.0.0.1", port=daemon_port)
-
-    t = threading.Thread(target=run_daemon, daemon=True)
-    t.start()
+    proc = subprocess.Popen([
+        'mcp-grok-daemon',
+        '--host', '127.0.0.1', '--port', str(daemon_port)
+    ])
 
     # Wait for daemon to start
     import time as _time
@@ -43,9 +42,10 @@ def server_daemon_proc():
     # Stop the daemon
     try:
         server_client.stop_daemon(daemon_port=daemon_port)
-        t.join(timeout=2)
+        proc.wait(timeout=5)
     except Exception:
-        pass
+        proc.kill()
+        proc.wait()
 
 
 @pytest.fixture(scope="session")

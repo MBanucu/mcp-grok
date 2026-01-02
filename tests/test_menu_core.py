@@ -1,4 +1,3 @@
-import os
 import time
 import pytest
 import socket
@@ -89,5 +88,3 @@ def wait_for_log(log_file, timeout=10.0, poll_interval=0.2):
                     return
         time.sleep(poll_interval)
     raise AssertionError(f"Log file {log_file} did not become nonempty within {timeout} seconds.")
-
-
