@@ -1,4 +1,5 @@
 import os
+import shutil
 import time
 import pytest
 import socket
@@ -57,10 +58,12 @@ def test_server_log(start_stop_server):
     wait_for_log(log_path, timeout=10.0)
 
 
+@pytest.mark.skipif(not shutil.which('superassistant-proxy'), reason="superassistant-proxy not available")
 def test_proxy_log(start_stop_proxy):
     wait_for_log(config.proxy_log, timeout=30.0)
 
 
+@pytest.mark.skipif(not shutil.which('superassistant-proxy'), reason="superassistant-proxy not available")
 def test_proxy_log_config_error(start_stop_proxy):
     """
     Fail on config error after proxy start. Print log for success marker.
