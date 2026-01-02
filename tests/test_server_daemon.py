@@ -2,6 +2,7 @@ import os
 import socket
 import time
 import threading
+import subprocess
 import re
 import urllib.request
 import json
@@ -129,60 +130,189 @@ def _wait_for_port(port, timeout=3.0):
 def test_daemon_start_list_stop(monkeypatch, tmp_path):
     daemon_port = pick_free_port()
     server_port = pick_free_port()
-    thread = threading.Thread(
-        target=lambda: server_daemon.run_daemon(host="127.0.0.1", port=daemon_port),
-        daemon=True,
+    proc = subprocess.Popen([
+        'mcp-grok-daemon',
+        '--host', '127.0.0.1', '--port', str(daemon_port)
+    ])
+    print(f"Waiting for daemon on port {daemon_port}...")
+    assert _wait_for_port(daemon_port), "Daemon did not start in time"
+    print(f"Starting managed server on port {server_port}")
+    resp = server_client.start_server(
+        port=server_port,
+        projects_dir=str(tmp_path),
+        daemon_port=daemon_port
     )
-    thread.start()
+    print(f"start_server resp: {resp}")
+    assert isinstance(resp, dict) and "result" in resp
+    info = resp["result"]
+    pid = info["pid"]
+    print(f"Managed server PID: {pid}")
+    # Test that logfile is created
+    logfile = info["logfile"]
+    assert os.path.exists(logfile), f"Logfile {logfile} was not created"
+    assert os.path.isfile(logfile), f"Logfile {logfile} is not a file"
+    listing = server_client.list_servers(daemon_port=daemon_port)
+    print(f"server list after start: {listing}")
+    assert str(pid) in listing.get("servers", {})
+    stop_resp = server_client.stop_managed_server(
+        pid=pid,
+        daemon_port=daemon_port
+    )
+    print(f"stop_managed_server resp: {stop_resp}")
+    listing_post = server_client.list_servers(daemon_port=daemon_port)
+    print(f"servers listing after stop: {listing_post}")
+    # The old server_daemon._SERVERS direct access is removed; use server list endpoint instead.
+    assert stop_resp.get("result") is True
+    stopd = server_client.stop_daemon(daemon_port=daemon_port)
+    print(f"daemon stop resp: {stopd}")
+    assert stopd.get("result") == "stopping"
+    proc.wait(timeout=5)
+    print(f"Daemon proc poll: {proc.poll()}")
+    assert proc.poll() is not None, "Daemon process did not exit"
+
+
+def test_start_server_runs_and_stops(server_daemon_proc):
+    """Test starting and stopping a server via the daemon."""
+    daemon_port = server_daemon_proc["port"]
+    projects_dir = server_daemon_proc["projects_dir"]
+    server_port = pick_free_port()
+
+    # Start server
+    resp = server_client.start_server(port=server_port, projects_dir=projects_dir, daemon_port=daemon_port)
+    assert resp["result"] is not None
+    pid = resp["result"]["pid"]
+
+    # Check it's in the list
+    listing = server_client.list_servers(daemon_port=daemon_port)
+    assert str(pid) in listing.get("servers", {})
+
+    # Stop server
+    stop_resp = server_client.stop_managed_server(pid=pid, daemon_port=daemon_port)
+    assert stop_resp.get("result") is True
+
+    # Wait for the process to exit
+    import psutil
     try:
-        print(f"Waiting for daemon on port {daemon_port}...")
-        assert _wait_for_port(daemon_port), "Daemon did not start in time"
-        print(f"Starting managed server on port {server_port}")
-        resp = server_client.start_server(
-            port=server_port,
-            projects_dir=str(tmp_path),
-            daemon_port=daemon_port
-        )
-        print(f"start_server resp: {resp}")
-        assert isinstance(resp, dict) and "result" in resp
-        info = resp["result"]
-        pid = info["pid"]
-        print(f"Managed server PID: {pid}")
-        # Test that logfile is created
-        logfile = info["logfile"]
-        assert os.path.exists(logfile), f"Logfile {logfile} was not created"
-        assert os.path.isfile(logfile), f"Logfile {logfile} is not a file"
-        listing = server_client.list_servers(daemon_port=daemon_port)
-        print(f"server list after start: {listing}")
-        assert str(pid) in listing.get("servers", {})
-        stop_resp = server_client.stop_managed_server(
-            pid=pid,
-            daemon_port=daemon_port
-        )
-        print(f"stop_managed_server resp: {stop_resp}")
-        listing_post = server_client.list_servers(daemon_port=daemon_port)
-        print(f"servers listing after stop: {listing_post}")
-        # The old server_daemon._SERVERS direct access is removed; use server list endpoint instead.
-        assert stop_resp.get("result") is True
-        stopd = server_client.stop_daemon(daemon_port=daemon_port)
-        print(f"daemon stop resp: {stopd}")
-        assert stopd.get("result") == "stopping"
-        thread.join(timeout=2)
-        print(f"Daemon thread alive after stop: {thread.is_alive()}")
-        assert not thread.is_alive(), "Daemon thread did not exit after stop"
-    finally:
-        try:
-            if thread.is_alive():
-                srv = getattr(server_daemon, "_DAEMON_SERVER", None)
-                print("Attempting daemon shutdown from finally block...")
-                if srv is not None:
-                    try:
-                        srv.shutdown()
-                    except Exception:
-                        print("Exception during daemon shutdown.")
-                thread.join(timeout=1)
-        except Exception:
-            print("Exception during final cleanup.")
+        p = psutil.Process(pid)
+        p.wait(timeout=2.0)
+    except psutil.NoSuchProcess:
+        pass  # Already exited
+
+    # Check it's not in the list
+    listing_after = server_client.list_servers(daemon_port=daemon_port)
+    assert str(pid) not in listing_after.get("servers", {})
+
+
+def test_server_listens_on_specified_port(server_daemon_proc):
+    """Test that a server started via daemon listens on the specified port."""
+    daemon_port = server_daemon_proc["port"]
+    projects_dir = server_daemon_proc["projects_dir"]
+    server_port = pick_free_port()
+
+    resp = server_client.start_server(port=server_port, projects_dir=projects_dir, daemon_port=daemon_port)
+    assert resp["result"] is not None
+    pid = resp["result"]["pid"]
+
+    # Check port is listening
+    assert _wait_for_port(server_port), f"Server did not listen on port {server_port}"
+
+    # Cleanup
+    server_client.stop_managed_server(pid=pid, daemon_port=daemon_port)
+    # Wait for the process to exit
+    import psutil
+    try:
+        p = psutil.Process(pid)
+        p.wait(timeout=2.0)
+    except psutil.NoSuchProcess:
+        pass  # Already exited
+
+
+def test_server_exits_on_bad_config(server_daemon_proc):
+    """Test that starting a server with bad config (privileged port) causes it to exit."""
+    daemon_port = server_daemon_proc["port"]
+    projects_dir = server_daemon_proc["projects_dir"]
+    bad_port = 1  # Privileged port, should cause server to exit
+
+    resp = server_client.start_server(port=bad_port, projects_dir=projects_dir, daemon_port=daemon_port)
+    assert resp["result"] is not None
+    info = resp["result"]
+    pid = info["pid"]
+    logfile = info["logfile"]
+
+    # Poll for the log to contain permission denied
+    import time
+    start = time.time()
+    timeout = 2.0
+    log_content = ""
+    while time.time() - start < timeout:
+        with open(logfile, 'r') as f:
+            log_content = f.read()
+            if "permission denied" in log_content.lower():
+                break
+        time.sleep(0.1)
+    else:
+        assert False, f"Expected 'permission denied' in logs within {timeout}s, got: {log_content}"
+
+    # Check that the server does not bind to the privileged port
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.connect(('127.0.0.1', bad_port))
+        s.close()
+        assert False, f"Server should not bind to privileged port {bad_port}"
+    except ConnectionRefusedError:
+        pass  # Expected
+
+    # Cleanup (server should already be stopped)
+    server_client.stop_managed_server(pid=pid, daemon_port=daemon_port)
+    # Wait for the process to exit
+    import psutil
+    try:
+        p = psutil.Process(pid)
+        p.wait(timeout=2.0)
+    except psutil.NoSuchProcess:
+        pass  # Already exited
+
+
+def test_server_log(server_daemon_proc):
+    """Test that a server started via daemon creates a log file."""
+    daemon_port = server_daemon_proc["port"]
+    projects_dir = server_daemon_proc["projects_dir"]
+    server_port = pick_free_port()
+
+    resp = server_client.start_server(port=server_port, projects_dir=projects_dir, daemon_port=daemon_port)
+    assert resp["result"] is not None
+    info = resp["result"]
+    logfile = info["logfile"]
+
+    # Check logfile exists
+    assert os.path.exists(logfile), f"Logfile {logfile} was not created"
+    assert os.path.isfile(logfile), f"Logfile {logfile} is not a file"
+
+    # Poll for log content
+    import time
+    start = time.time()
+    timeout = 2.0
+    log_content = ""
+    while time.time() - start < timeout:
+        with open(logfile, 'r') as f:
+            log_content = f.read()
+            if "Server startup" in log_content:
+                break
+        time.sleep(0.1)
+    else:
+        assert False, f"Expected 'Server startup' in logs within {timeout}s, got: {log_content}"
+
+    # Cleanup
+    pid = info["pid"]
+    server_client.stop_managed_server(pid=pid, daemon_port=daemon_port)
+    # Wait for the process to exit
+    import psutil
+    try:
+        p = psutil.Process(pid)
+        p.wait(timeout=2.0)
+    except psutil.NoSuchProcess:
+        pass  # Already exited
 
 
 def test_run_daemon_stop_removes_managed_servers(monkeypatch, tmp_path):

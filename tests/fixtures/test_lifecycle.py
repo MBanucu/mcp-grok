@@ -14,13 +14,30 @@ def pytest_runtest_teardown(item, nextitem):
     before = _test_proc_before.get(item.nodeid, set())
     after = set(_find_mcp_procs().keys())
     started = after - before
+    # Exclude servers managed by running daemons
+    import psutil
+    import urllib.request
+    import json
+    tracked_pids = set()
     try:
-        from menu import menu_core as _menu_core_for_tests
-        tracked = getattr(_menu_core_for_tests.server_manager, '_servers', [])
-        tracked_pids = {entry.get('proc').pid for entry in tracked if entry.get('proc')}
-        started = started - tracked_pids
+        daemons = psutil.process_iter(attrs=['pid', 'cmdline'])
+        for p in daemons:
+            try:
+                cmdline = p.info['cmdline'] or []
+                if 'mcp_grok.server_daemon' in ' '.join(cmdline):
+                    for i, arg in enumerate(cmdline):
+                        if arg == '--port' and i + 1 < len(cmdline):
+                            port = int(cmdline[i+1])
+                            url = f"http://127.0.0.1:{port}/list"
+                            with urllib.request.urlopen(url, timeout=1) as resp:
+                                data = json.load(resp)
+                                servers = data.get('servers', {})
+                                tracked_pids.update(int(pid) for pid in servers.keys())
+            except Exception:
+                pass
     except Exception:
         pass
+    started = started - tracked_pids
     if started:
         details = []
         all_procs = _find_mcp_procs()

@@ -130,6 +130,7 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
     def _handle_daemon_stop(self) -> None:
         self._send_json(200, {"result": "stopping"})
         try:
+            self.daemon._stop_all()
             threading.Thread(target=self.server.shutdown, daemon=True).start()
         except Exception:
             pass
