@@ -3,7 +3,6 @@ import pytest
 from tests.fixtures.process_utils import _gather_leftover_entries, _kill_untracked
 
 
-
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_leftover_servers():
     """Session-scoped autouse fixture that ensures no mcp-grok-server processes
