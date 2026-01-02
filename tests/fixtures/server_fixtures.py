@@ -40,12 +40,8 @@ def server_daemon_proc():
         "projects_dir": projects_dir,
     }
     # Stop the daemon
-    try:
-        server_client.stop_daemon(daemon_port=daemon_port)
-        proc.wait(timeout=5)
-    except Exception:
-        proc.kill()
-        proc.wait()
+    server_client.stop_daemon(daemon_port=daemon_port)
+    proc.wait(timeout=5)
 
 
 @pytest.fixture(scope="session")
@@ -53,30 +49,24 @@ def mcp_server(server_daemon_proc):
     daemon_port = server_daemon_proc["port"]
     projects_dir = server_daemon_proc["projects_dir"]
     server_port = pick_free_port()
-    try:
-        resp = server_client.start_server(port=server_port, projects_dir=projects_dir, daemon_port=daemon_port)
-        info = resp["result"]
-        import time as _t
-        import socket as _s
-        addr = ("127.0.0.1", server_port)
-        ready = False
-        for _ in range(60):
-            try:
-                with _s.create_connection(addr, timeout=0.2):
-                    ready = True
-                    break
-            except Exception:
-                _t.sleep(0.1)
-        if not ready:
-            raise RuntimeError(f"Managed server on port {server_port} not ready after 6 sec")
-    except Exception as e:
-        raise RuntimeError(f"Failed to start managed server via daemon: {e}")
+    resp = server_client.start_server(port=server_port, projects_dir=projects_dir, daemon_port=daemon_port)
+    info = resp["result"]
+    import time as _t
+    import socket as _s
+    addr = ("127.0.0.1", server_port)
+    ready = False
+    for _ in range(60):
+        try:
+            with _s.create_connection(addr, timeout=0.2):
+                ready = True
+                break
+        except Exception:
+            _t.sleep(0.1)
+    if not ready:
+        raise RuntimeError(f"Managed server on port {server_port} not ready after 6 sec")
     yield {
         "url": f"http://localhost:{server_port}/mcp",
         "projects_dir": projects_dir
     }
     # Stop the managed server
-    try:
-        server_client.stop_managed_server(pid=info["pid"], daemon_port=daemon_port)
-    except Exception:
-        pass
+    server_client.stop_managed_server(pid=info["pid"], daemon_port=daemon_port)
