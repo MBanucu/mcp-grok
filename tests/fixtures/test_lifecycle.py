@@ -55,27 +55,17 @@ def pytest_runtest_teardown(item, nextitem):
             _test_leaks.append((item.nodeid, details))
 
 
-from .process_monitor import _monitor
 from .daemon_manager import DaemonManager
 
 _daemon_manager = DaemonManager()
 
 def pytest_sessionstart(session):
     print("pytest_sessionstart called", flush=True)
-    global _daemon_manager, _monitor
+    global _daemon_manager
     _daemon_manager.set_initial()
-    # Start process monitoring
-    _monitor.start()
 
 
 def pytest_sessionfinish(session, exitstatus):
-    # Stop process monitoring
-    global _monitor
-    _monitor.stop()
-
-    # Print process history
-    _monitor.print_history()
-
     # Check daemon cleanup
     global _daemon_manager
     _daemon_manager.cleanup()
