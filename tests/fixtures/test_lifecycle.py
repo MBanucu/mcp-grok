@@ -93,10 +93,13 @@ def _monitor_processes():
                 if p:
                     try:
                         name = p.name() or ''
-                        cmdline = ' '.join(p.cmdline() or [])
-                        process_info[pid] = (name, cmdline)
                     except Exception:
-                        process_info[pid] = ('<unknown>', '<unknown>')
+                        name = '<unknown>'
+                    try:
+                        cmdline = ' '.join(p.cmdline() or [])
+                    except Exception:
+                        cmdline = '<unknown>'
+                    process_info[pid] = (name, cmdline)
 
             if new_pids:
                 processes = []
