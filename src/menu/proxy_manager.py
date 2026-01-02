@@ -1,5 +1,6 @@
 import subprocess
 import os
+from typing import Optional
 from mcp_grok.config import config
 
 
@@ -15,9 +16,9 @@ class ProxyManager:
     def __init__(self, config_path=None, port=3006):
         self.config_path = config_path
         self.port = port
-        self.proc = None
+        self.proc: Optional[subprocess.Popen[bytes]] = None
 
-    def start_proxy(self):
+    def start_proxy(self) -> subprocess.Popen[bytes]:
         log = open(_writable_logfile(config.proxy_log), "a")
         cmd = ['superassistant-proxy', '--port', str(self.port)]
         if self.config_path:
