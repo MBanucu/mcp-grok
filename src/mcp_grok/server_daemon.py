@@ -12,6 +12,10 @@ nonstandard HTTPServer hacks.
 
 Intended for use by tests via mcp_grok.server_client.
 """
+try:
+    import psutil
+except ImportError:
+    psutil = None
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import threading
@@ -410,20 +414,40 @@ def _get_listen_ports(p):
     return listen_ports
 
 
+def _get_process_info(p, errors):
+    """Get process info with error handling."""
+    pid = getattr(p, 'pid', None)
+    name = getattr(p, '_name', '')
+    cmdline = ''
+    try:
+        cmdline = ' '.join(p.cmdline() or [])
+    except Exception as e:
+        cmdline = '<cmdline unavailable>'
+        errors.append(f"Could not get cmdline for process {pid} ({name}): {e}")
+    return pid, name, cmdline
+
+
+def _process_psutil_entry(p, patterns, entries, errors):
+    """Process a single psutil process entry."""
+    pid, name, cmdline = _get_process_info(p, errors)
+    try:
+        if any(pat in name.lower() or pat in cmdline.lower() for pat in patterns):
+            listen_ports = _get_listen_ports(p)
+            entries.append((pid, name, cmdline, listen_ports))
+    except Exception as e:  # psutil exceptions
+        errors.append(f"Error processing process {pid} ({name}, cmdline: {cmdline}): {e}")
+
+
 def _gather_leftover_processes(
     patterns: List[str]
 ) -> List[Tuple[Optional[int], str, str, Set[int]]]:
     """Gather entries of leftover processes matching any of the patterns."""
     entries = []
+    errors = []
     try:
         import psutil
         for p in psutil.process_iter():
-            pid = getattr(p, 'pid', None) or p.pid
-            name = (p.name() or '').lower()
-            cmdline = ' '.join(p.cmdline() or []).lower()
-            if any(pat in name or pat in cmdline for pat in patterns):
-                listen_ports = _get_listen_ports(p)
-                entries.append((pid, name, cmdline, listen_ports))
+            _process_psutil_entry(p, patterns, entries, errors)
     except ImportError:
         # Fallback to shell
         pgrep_patterns = '|'.join(patterns)
@@ -434,6 +458,8 @@ def _gather_leftover_processes(
                 pid = int(parts[0])
                 cmdline = parts[1] if len(parts) > 1 else ''
                 entries.append((pid, '', cmdline, set()))
+    if errors:
+        raise Exception(f"Errors during process gathering: {'; '.join(errors)}")
     return entries
 
 
