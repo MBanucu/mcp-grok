@@ -16,7 +16,7 @@ try:
     import psutil
 except ImportError:
     psutil = None
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import HTTPServer
 import json
 import threading
 import os
@@ -26,7 +26,7 @@ import time
 import datetime
 import argparse
 from typing import (
-    Dict, Any, Optional, TypedDict, Callable, Tuple, List, Set, cast
+    Dict, Any, Optional, TypedDict, Tuple, List, Set, cast
 )
 
 from .server_daemon_handler import ServerDaemonHandler, make_handler
@@ -93,17 +93,7 @@ def do_start_server(
         return handler._send_json(500, {"error": str(e)})
 
 
-    def __init__(self, daemon: 'ServerDaemon', *args, **kwargs) -> None:
-        self.daemon = daemon
-        super().__init__(*args, **kwargs)
 
-    def _send_json(self, code: int, payload: Any) -> None:
-        payload_bytes = json.dumps(payload).encode("utf-8")
-        self.send_response(code)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(payload_bytes)))
-        self.end_headers()
-        self.wfile.write(payload_bytes)
 
     def do_GET(self) -> None:
         if self.path == "/list":
@@ -197,20 +187,6 @@ def do_start_server(
 
     def log_message(self, format: str, *args) -> None:
         return
-
-
-def make_handler(
-    daemon: 'ServerDaemon'
-) -> Callable[..., 'ServerDaemonHandler']:
-    """
-    Factory returning a handler class bound to provided daemon instance.
-    This binds 'self.daemon' in each request handler instance, using closure scope,
-    and avoids nonstandard signature hacks
-    (required for http.server compatibility).
-    """
-    return lambda *args, **kwargs: ServerDaemonHandler(daemon, *args, **kwargs)
-
-# The server always uses an instance-bound handler via make_handler(self).
 
 
 class ServerDaemonHTTPServer(HTTPServer):
