@@ -254,6 +254,7 @@ class MenuApp:
             print("Exiting...")
             self.state.stop_proxy()
             self.state.stop_mcp()
+            self.state.stop_daemon()
             return False
         return True
 
