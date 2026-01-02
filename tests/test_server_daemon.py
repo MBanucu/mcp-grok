@@ -7,6 +7,7 @@ import re
 import urllib.request
 import json
 import pytest
+import psutil
 from mcp_grok import server_daemon
 from mcp_grok import server_client
 
@@ -191,7 +192,6 @@ def test_start_server_runs_and_stops(server_daemon_proc):
     assert stop_resp.get("result") is True
 
     # Wait for the process to exit
-    import psutil
     try:
         p = psutil.Process(pid)
         p.wait(timeout=2.0)
@@ -219,7 +219,6 @@ def test_server_listens_on_specified_port(server_daemon_proc):
     # Cleanup
     server_client.stop_managed_server(pid=pid, daemon_port=daemon_port)
     # Wait for the process to exit
-    import psutil
     try:
         p = psutil.Process(pid)
         p.wait(timeout=2.0)
@@ -266,7 +265,6 @@ def test_server_exits_on_bad_config(server_daemon_proc):
     # Cleanup (server should already be stopped)
     server_client.stop_managed_server(pid=pid, daemon_port=daemon_port)
     # Wait for the process to exit
-    import psutil
     try:
         p = psutil.Process(pid)
         p.wait(timeout=2.0)
@@ -307,7 +305,6 @@ def test_server_log(server_daemon_proc):
     pid = info["pid"]
     server_client.stop_managed_server(pid=pid, daemon_port=daemon_port)
     # Wait for the process to exit
-    import psutil
     try:
         p = psutil.Process(pid)
         p.wait(timeout=2.0)
