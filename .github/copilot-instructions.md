@@ -55,7 +55,7 @@ nix develop .#menuSuppressed --command sh -c 'flake8 src tests --count --select=
 nix develop .#menuSuppressed --command sh -c 'flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics'
 ```
 
-**Line length:** Target 79 characters maximum; exceptions up to 127 shown for statistics only.
+**Line length:** Target 79 characters (strict). The second flake8 run shows statistics for lines up to 127 characters but doesn't enforce them.
 
 ### Type Checking
 Static typing is checked via Pyright:
@@ -69,7 +69,7 @@ All public APIs and method arguments should be fully typed.
 
 1. **PEP 8 Compliance:** Follow Python PEP 8 style guidelines
 2. **Type Annotations:** All public APIs must have complete type annotations
-3. **Line Length:** Maximum 79 characters (strict), up to 127 for statistics
+3. **Line Length:** Target 79 characters (strict limit enforced by CI)
 4. **Complexity:** Keep cyclomatic complexity ≤ 10
 5. **Documentation:** Maintain docstrings for public classes, functions, and modules
 6. **Testing:** All features must have corresponding tests
@@ -109,8 +109,13 @@ The server exposes these tools via JSON-RPC:
 - `change_active_project(project_name: str)` - Switch projects
 - `list_all_projects()` - List all projects
 - `get_active_project()` - Get current project info
-- `read_file(file_path: str, ...)` - Read file content
-- `write_file(file_path: str, content: str, ...)` - Write/update file (supports overwrite, insert_at_line, replace_lines_start/end, replaceAll parameters)
+- `read_file(file_path: str, limit: int = 2000, offset: int = 0)` - Read up to `limit` lines from file, starting at line `offset` (0-based)
+- `write_file(file_path: str, content: str, overwrite: bool = True, replace_lines_start: Optional[int] = None, replace_lines_end: Optional[int] = None, insert_at_line: Optional[int] = None, replaceAll: bool = False)` - Write/update file with various modes:
+  - Basic write: Set `content` and `overwrite`
+  - Line replacement: Use `replace_lines_start` (inclusive, 0-based) and `replace_lines_end` (exclusive, 0-based)
+  - Line insertion: Use `insert_at_line` (0-based, inserts before this line)
+  - Full replacement: Set `replaceAll=True`
+  - Delete lines: Use `replace_lines_start`/`end` with empty `content`
 
 ## Security Considerations
 
