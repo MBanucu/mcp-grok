@@ -19,11 +19,4 @@ def pytest_sessionstart(session):
 def pytest_sessionfinish(session, exitstatus):
     # Check daemon cleanup
     _daemon_manager.cleanup()
-    if tracker.test_leaks:
-        lines = [
-            "Detected tests that started mcp-grok-server processes and did not stop them:"]
-        for nodeid, details in tracker.test_leaks:
-            lines.append(f"- {nodeid}")
-            for d in details:
-                lines.append(f"    {d}")
-        print("\n" + "\n".join(lines) + "\n")
+    tracker.report_leaks()

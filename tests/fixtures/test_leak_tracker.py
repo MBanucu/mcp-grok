@@ -50,3 +50,14 @@ class TestLeakTracker:
             except psutil.NoSuchProcess:
                 pass
         return tracked
+
+    def report_leaks(self):
+        if self.test_leaks:
+            lines = [
+                "Detected tests that started mcp-grok-server processes and did not stop them:"]
+            for nodeid, details in self.test_leaks:
+                lines.append(f"- {nodeid}")
+                for d in details:
+                    lines.append(f"    {d}")
+            print("\n" + "\n".join(lines) + "\n")
+            raise RuntimeError("Some tests leaked mcp-grok-server processes")
