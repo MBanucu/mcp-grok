@@ -41,6 +41,9 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
         if self.path == "/list":
             data = {"servers": self.daemon._list_servers()}
             self._send_json(200, data)
+        elif self.path == "/proxy/list":
+            data = {"proxies": self.daemon._list_proxies()}
+            self._send_json(200, data)
         else:
             self._send_json(404, {"error": "not found"})
 
@@ -59,6 +62,17 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
         assert port is not None  # Since error would have been returned
         try:
             info = self.daemon._start_server_proc(cast(int, port), projects_dir)
+            return self._send_json(200, {"result": info.to_dict()})
+        except Exception as e:
+            return self._send_json(500, {"error": str(e)})
+
+    def _handle_proxy_start(self, payload: Dict[str, Any]) -> None:
+        port_raw = payload.get("port")
+        port = int(port_raw) if port_raw is not None else 3006  # default port
+        if port == 0:
+            return self._send_json(400, {"error": "port required"})
+        try:
+            info = self.daemon._start_proxy_proc(port)
             return self._send_json(200, {"result": info.to_dict()})
         except Exception as e:
             return self._send_json(500, {"error": str(e)})
@@ -84,6 +98,30 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
         if port is not None:
             return self._do_server_stop_by_port(port)
         return self._send_json(400, {"error": "No valid pid or port provided"})
+
+    def _handle_proxy_stop(self, payload: Dict[str, Any]) -> None:
+        pid, port, error = self._parse_stop_server_params(payload)  # reuse the same parsing
+        if error:
+            return self._send_json(400, {"error": error})
+        if pid is not None:
+            return self._do_proxy_stop_by_pid(pid)
+        if port is not None:
+            return self._do_proxy_stop_by_port(port)
+        return self._send_json(400, {"error": "No valid pid or port provided"})
+
+    def _do_proxy_stop_by_pid(self, pid: int) -> None:
+        try:
+            ok = self.daemon._stop_proxy_proc_by_pid(pid)
+        except Exception:
+            ok = False
+        return self._send_json(200, {"result": bool(ok)})
+
+    def _do_proxy_stop_by_port(self, port: int) -> None:
+        try:
+            ok = self.daemon._stop_proxy_proc_by_port(port)
+        except Exception:
+            ok = False
+        return self._send_json(200, {"result": bool(ok)})
 
     def _parse_stop_server_params(
         self, payload: Dict[str, Any]
@@ -122,6 +160,10 @@ class ServerDaemonHandler(BaseHTTPRequestHandler):
         payload = self._read_json_body()
         if self.path == "/start":
             return self._handle_start(payload)
+        if self.path == "/proxy/start":
+            return self._handle_proxy_start(payload)
+        if self.path == "/proxy/stop":
+            return self._handle_proxy_stop(payload)
         if self.path == "/stop_all":
             return self._handle_stop_all()
         if self.path == "/daemon/stop":

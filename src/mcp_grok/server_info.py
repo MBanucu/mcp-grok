@@ -11,6 +11,13 @@ class ServerInfoDict(TypedDict):
     audit_log: str
 
 
+class ProxyInfoDict(TypedDict):
+    pid: int
+    port: int
+    logfile: str
+    started_at: float
+
+
 class ServerInfo:
     def __init__(
         self, pid: int, port: int, projects_dir: str, logfile: str,
@@ -32,4 +39,25 @@ class ServerInfo:
             logfile=self.logfile,
             started_at=self.started_at,
             audit_log=self.audit_log,
+        )
+
+
+class ProxyInfo:
+    def __init__(
+        self, pid: int, port: int, logfile: str,
+        started_at: float, proc: subprocess.Popen, proxy_manager
+    ):
+        self.pid = pid
+        self.port = port
+        self.logfile = logfile
+        self.started_at = started_at
+        self.proc = proc
+        self.proxy_manager = proxy_manager
+
+    def to_dict(self) -> ProxyInfoDict:
+        return ProxyInfoDict(
+            pid=self.pid,
+            port=self.port,
+            logfile=self.logfile,
+            started_at=self.started_at,
         )

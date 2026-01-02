@@ -26,12 +26,14 @@ import signal
 import time
 from typing import Dict, Optional
 
-from .server_info import ServerInfo, ServerInfoDict
+from .server_info import ServerInfo, ServerInfoDict, ProxyInfo, ProxyInfoDict
 
 from .server_daemon_handler import make_handler
 
 from .server_client import DEFAULT_DAEMON_PORT
 from .config import config
+
+from menu.proxy_manager import ProxyManager
 
 
 class ServerDaemonHTTPServer(HTTPServer):
@@ -51,6 +53,8 @@ class ServerDaemon:
         self.port = port
         self._servers: Dict[int, ServerInfo] = {}
         self._servers_lock = threading.Lock()
+        self._proxies: Dict[int, ProxyInfo] = {}
+        self._proxies_lock = threading.Lock()
         self.httpd: Optional[HTTPServer] = None
 
     def _log_path_for(self, port: int, timestamp: str) -> str:
@@ -88,6 +92,52 @@ class ServerDaemon:
         with self._servers_lock:
             self._servers[proc.pid] = info
         return info
+
+    def _start_proxy_proc(self, port: int) -> ProxyInfo:
+        now = datetime.datetime.now()
+        started_at = now.timestamp()
+        logfile = self._log_path_for(port, now.strftime("%Y%m%d_%H%M%S"))
+        proxy_manager = ProxyManager(port=port)
+        proc = proxy_manager.start_proxy()
+        info = ProxyInfo(
+            pid=proc.pid,
+            port=port,
+            logfile=logfile,
+            started_at=started_at,
+            proc=proc,
+            proxy_manager=proxy_manager
+        )
+        with self._proxies_lock:
+            self._proxies[proc.pid] = info
+        return info
+
+    def _stop_proxy_proc_by_pid(self, pid: int) -> bool:
+        with self._proxies_lock:
+            info = self._proxies.get(pid)
+        if not info:
+            return self._os_kill_pid(pid)
+        return self._stop_proxy_info_proc(pid, info)
+
+    def _stop_proxy_info_proc(self, pid: int, info: ProxyInfo) -> bool:
+        try:
+            info.proxy_manager.stop_proxy()
+            return True
+        except Exception:
+            return False
+        finally:
+            with self._proxies_lock:
+                self._proxies.pop(pid, None)
+
+    def _stop_proxy_proc_by_port(self, port: int) -> bool:
+        with self._proxies_lock:
+            for pid, info in list(self._proxies.items()):
+                if info.port == port:
+                    return self._stop_proxy_proc_by_pid(pid)
+        return False
+
+    def _list_proxies(self) -> dict[str, ProxyInfoDict]:
+        with self._proxies_lock:
+            return {str(pid): info.to_dict() for pid, info in self._proxies.items()}
 
     def _stop_server_proc_by_pid(self, pid: int) -> bool:
         with self._servers_lock:
@@ -148,9 +198,14 @@ class ServerDaemon:
 
     def _stop_all(self) -> int:
         with self._servers_lock:
-            pids = list(self._servers.keys())
+            server_pids = list(self._servers.keys())
+        with self._proxies_lock:
+            proxy_pids = list(self._proxies.keys())
         count = 0
-        for pid in pids:
+        for pid in proxy_pids:
+            if self._stop_proxy_proc_by_pid(pid):
+                count += 1
+        for pid in server_pids:
             if self._stop_server_proc_by_pid(pid):
                 count += 1
         return count
