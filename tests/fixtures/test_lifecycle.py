@@ -137,6 +137,57 @@ class ProcessMonitor:
                 self.history.append({"type": "error", "message": f"Error monitoring processes: {e}", "timestamp": timestamp})
             time.sleep(0.05)
 
+    def print_history(self):
+        if self.history:
+            # First pass: collect created and terminated PIDs
+            created_pids = set()
+            terminated_pids = set()
+            for entry in self.history:
+                if isinstance(entry, dict):
+                    if entry["type"] == "new_processes":
+                        for proc in entry["processes"]:
+                            created_pids.add(proc['pid'])
+                    elif entry["type"] == "terminated_processes":
+                        for proc in entry["processes"]:
+                            terminated_pids.add(proc['pid'])
+
+            not_terminated = created_pids - terminated_pids
+
+            # Second pass: print with highlighting
+            print("\nProcess lifecycle history:")
+            for entry in self.history:
+                if isinstance(entry, dict):
+                    if entry["type"] == "initial_processes":
+                        print(f"  Initial processes: {entry['count']}")
+                    elif entry["type"] == "new_processes":
+                        print(f"  [{entry['timestamp']}] New processes:")
+                        for proc in entry["processes"]:
+                            pid = proc['pid']
+                            created_pids.add(pid)
+                            if pid in not_terminated:
+                                print(f"    \033[91m=====> LEAK: PID {proc['pid']}: {proc['name']} - {proc['cmdline']}\033[0m")
+                            else:
+                                print(f"    PID {proc['pid']}: {proc['name']} - {proc['cmdline']}")
+                    elif entry["type"] == "terminated_processes":
+                        print(f"  [{entry['timestamp']}] Terminated processes:")
+                        for proc in entry["processes"]:
+                            print(f"    PID {proc['pid']}: {proc['name']} - {proc['cmdline']}")
+                    elif entry["type"] == "error":
+                        print(f"  [{entry.get('timestamp', 'N/A')}] {entry['message']}")
+                    elif entry["type"] == "monitoring_stopped":
+                        print("  Monitoring stopped")
+                    else:
+                        print(f"  Unknown entry: {entry}")
+                else:
+                    print(f"  {entry}")
+
+            # Print summary
+            if not_terminated:
+                print(f"\nProcesses created during session but not terminated: {sorted(not_terminated)}")
+            else:
+                print("\nAll created processes were properly terminated.")
+            print()
+
 _monitor = ProcessMonitor()
 
 def pytest_sessionstart(session):
@@ -154,55 +205,7 @@ def pytest_sessionfinish(session, exitstatus):
     _monitor.stop()
 
     # Print process history
-    if _monitor.history:
-        # First pass: collect created and terminated PIDs
-        created_pids = set()
-        terminated_pids = set()
-        for entry in _monitor.history:
-            if isinstance(entry, dict):
-                if entry["type"] == "new_processes":
-                    for proc in entry["processes"]:
-                        created_pids.add(proc['pid'])
-                elif entry["type"] == "terminated_processes":
-                    for proc in entry["processes"]:
-                        terminated_pids.add(proc['pid'])
-
-        not_terminated = created_pids - terminated_pids
-
-        # Second pass: print with highlighting
-        print("\nProcess lifecycle history:")
-        for entry in _monitor.history:
-            if isinstance(entry, dict):
-                if entry["type"] == "initial_processes":
-                    print(f"  Initial processes: {entry['count']}")
-                elif entry["type"] == "new_processes":
-                    print(f"  [{entry['timestamp']}] New processes:")
-                    for proc in entry["processes"]:
-                        pid = proc['pid']
-                        created_pids.add(pid)
-                        if pid in not_terminated:
-                            print(f"    \033[91m=====> LEAK: PID {proc['pid']}: {proc['name']} - {proc['cmdline']}\033[0m")
-                        else:
-                            print(f"    PID {proc['pid']}: {proc['name']} - {proc['cmdline']}")
-                elif entry["type"] == "terminated_processes":
-                    print(f"  [{entry['timestamp']}] Terminated processes:")
-                    for proc in entry["processes"]:
-                        print(f"    PID {proc['pid']}: {proc['name']} - {proc['cmdline']}")
-                elif entry["type"] == "error":
-                    print(f"  [{entry.get('timestamp', 'N/A')}] {entry['message']}")
-                elif entry["type"] == "monitoring_stopped":
-                    print("  Monitoring stopped")
-                else:
-                    print(f"  Unknown entry: {entry}")
-            else:
-                print(f"  {entry}")
-
-        # Print summary
-        if not_terminated:
-            print(f"\nProcesses created during session but not terminated: {sorted(not_terminated)}")
-        else:
-            print("\nAll created processes were properly terminated.")
-        print()
+    _monitor.print_history()
 
     # Check daemon cleanup
     from mcp_grok.server_daemon import _gather_leftover_daemons, cleanup_leftover_daemons
