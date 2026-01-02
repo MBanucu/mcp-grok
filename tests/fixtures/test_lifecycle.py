@@ -58,13 +58,11 @@ def pytest_runtest_teardown(item, nextitem):
 from .daemon_manager import _daemon_manager
 
 def pytest_sessionstart(session):
-    global _daemon_manager
     _daemon_manager.set_initial()
 
 
 def pytest_sessionfinish(session, exitstatus):
     # Check daemon cleanup
-    global _daemon_manager
     _daemon_manager.cleanup()
     if _test_leaks:
         lines = [
