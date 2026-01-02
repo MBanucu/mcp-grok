@@ -14,22 +14,25 @@ def _get_tracked_server_pids():
     import urllib.request
     import json
     tracked = set()
-    for proc in psutil.process_iter(attrs=['cmdline']):
-        cmd = ' '.join(proc.info['cmdline'] or [])
-        if 'mcp_grok.server_daemon' in cmd:
-            port = None
-            args = proc.info['cmdline']
-            for i in range(len(args) - 1):
-                if args[i] == '--port':
-                    port = int(args[i + 1])
-                    break
-            if port:
-                try:
-                    with urllib.request.urlopen(f"http://127.0.0.1:{port}/list", timeout=1) as r:
-                        data = json.load(r)
-                        tracked.update(int(p) for p in data.get('servers', {}))
-                except Exception:
-                    pass
+    for proc in psutil.process_iter():
+        try:
+            cmd = ' '.join(proc.cmdline() or [])
+            if 'mcp_grok.server_daemon' in cmd:
+                port = None
+                args = proc.cmdline()
+                for i in range(len(args) - 1):
+                    if args[i] == '--port':
+                        port = int(args[i + 1])
+                        break
+                if port:
+                    try:
+                        with urllib.request.urlopen(f"http://127.0.0.1:{port}/list", timeout=1) as r:
+                            data = json.load(r)
+                            tracked.update(int(p) for p in data.get('servers', {}))
+                    except Exception:
+                        pass
+        except psutil.NoSuchProcess:
+            pass
     return tracked
 
 
