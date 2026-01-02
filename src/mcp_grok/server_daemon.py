@@ -431,7 +431,7 @@ def _process_psutil_entry(p, patterns, entries, errors):
     """Process a single psutil process entry."""
     pid, name, cmdline = _get_process_info(p, errors)
     try:
-        if any(pat in name.lower() or pat in cmdline.lower() for pat in patterns):
+        if any(pat in (name or '').lower() or pat in cmdline.lower() for pat in patterns):
             listen_ports = _get_listen_ports(p)
             entries.append((pid, name, cmdline, listen_ports))
     except Exception as e:  # psutil exceptions
