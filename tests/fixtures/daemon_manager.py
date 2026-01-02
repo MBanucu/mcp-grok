@@ -3,11 +3,11 @@ class DaemonManager:
         self.initial_daemons = set()
 
     def set_initial(self):
-        from mcp_grok.server_daemon import _gather_running_daemons
+        from mcp_grok.process_cleanup import _gather_running_daemons
         self.initial_daemons = {pid for pid, _, _, _ in _gather_running_daemons() if pid is not None}
 
     def cleanup(self):
-        from mcp_grok.server_daemon import _gather_running_daemons, cleanup_running_daemons
+        from mcp_grok.process_cleanup import _gather_running_daemons, cleanup_running_daemons
         final_daemons = {pid for pid, _, _, _ in _gather_running_daemons() if pid is not None}
         extra_daemons = final_daemons - self.initial_daemons
         if extra_daemons:

@@ -12,7 +12,7 @@ def cleanup_leftover_servers():
     so leaks are fixed instead of silently ignored.
     """
     yield
-    from mcp_grok.server_daemon import cleanup_running_mcp_server_processes as cleanup_daemon
+    from mcp_grok.process_cleanup import cleanup_running_mcp_server_processes as cleanup_daemon
     cleanup_daemon()
     # Since ServerManager is removed, no tracked servers to stop
     leftover_entries = _gather_leftover_entries()
