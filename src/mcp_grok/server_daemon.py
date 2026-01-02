@@ -375,7 +375,7 @@ def _gather_with_psutil() -> List[Tuple[Optional[int], str, str, Set[int]]]:
             if 'mcp-grok-server' in name or 'mcp-grok-server' in cmdline or 'mcp_grok.mcp_grok_server' in cmdline:
                 listen_ports = set()
                 try:
-                    for c in p.connections(kind='inet'):
+                    for c in p.net_connections(kind='inet'):
                         if c.status == psutil.CONN_LISTEN and c.laddr:
                             listen_ports.add(c.laddr[1])
                 except Exception:
@@ -406,7 +406,7 @@ def _get_listen_ports(p):
     """Get listen ports for a psutil process."""
     listen_ports = set()
     try:
-        for c in p.connections(kind='inet'):
+        for c in p.net_connections(kind='inet'):
             if c.status == p._ps.CONN_LISTEN and c.laddr:
                 listen_ports.add(c.laddr[1])
     except Exception:
