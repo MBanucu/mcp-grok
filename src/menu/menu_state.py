@@ -51,12 +51,26 @@ class MenuState:
                 self.mcp_running = False
 
     def stop_mcp(self):
+        pids_to_wait = []
         try:
             servers = server_client.list_servers()
             for pid_str in servers.get("servers", {}):
-                server_client.stop_managed_server(pid=int(pid_str))
+                pid = int(pid_str)
+                pids_to_wait.append(pid)
+                server_client.stop_managed_server(pid=pid)
         except Exception as e:
             print(f"Failed to stop servers via daemon: {e}")
+        # Wait for processes to exit
+        import psutil
+        import time
+        start = time.time()
+        timeout = 5.0
+        while pids_to_wait and (time.time() - start) < timeout:
+            pids_to_wait = [pid for pid in pids_to_wait if psutil.pid_exists(pid)]
+            if pids_to_wait:
+                time.sleep(0.1)
+        if pids_to_wait:
+            print(f"Warning: Some processes did not exit: {pids_to_wait}")
         self.mcp_running = False
 
     def is_proxy_running(self) -> bool:

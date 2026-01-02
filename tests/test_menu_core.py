@@ -16,23 +16,70 @@ config.port = FREE_PORT  # Dynamically select a free port for this test module
 
 
 @pytest.fixture(scope="module")
-def start_stop_proxy():
+def start_stop_proxy(mcp_server):
     """
     Fixture to start/stop the proxy process for tests.
+    Depends on mcp_server to create matching config.json.
     Returns the process object.
     """
+    import tempfile
+    import json
+    import os
+
+    # Create temp config.json with the server URL
+    config_data = {
+        "mcpServers": {
+            "test-server": {
+                "url": mcp_server["url"]
+            }
+        }
+    }
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(config_data, f)
+        config_path = f.name
+
     try:
-        proc = menu_core.start_proxy()
+        proc = menu_core.start_proxy(config_path=config_path)
+        print(f"Started proxy with PID: {proc.pid}")
     except FileNotFoundError as e:
         raise RuntimeError(f"superassistant-proxy executable not found. Please ensure it is installed and in PATH. Error: {e}")
     except Exception as e:
         raise RuntimeError(f"Failed to start superassistant-proxy: {e}")
     yield proc
     menu_core.stop_proxy(proc)
+    # Clean up temp file
+    os.unlink(config_path)
 
 
 def test_proxy_log(start_stop_proxy):
     wait_for_log(config.proxy_log, timeout=30.0)
+    # Wait for the config loaded message
+    import time
+    start = time.time()
+    timeout = 10.0
+    while time.time() - start < timeout:
+        with open(config.proxy_log, 'r') as f:
+            content = f.read()
+            if "Loaded config with 1 servers" in content:
+                break
+        time.sleep(0.1)
+    else:
+        raise AssertionError(f"Proxy log did not contain 'Loaded config with 1 servers' within {timeout}s")
+
+    # Print proxy process and subprocesses
+    import psutil
+    try:
+        proc_obj = psutil.Process(start_stop_proxy.pid)
+        print(f"Proxy process: {proc_obj.pid} {proc_obj.name()}")
+        children = proc_obj.children(recursive=True)
+        if children:
+            print("Proxy subprocesses:")
+            for child in children:
+                print(f"  - {child.pid} {child.name()}")
+        else:
+            print("No proxy subprocesses")
+    except psutil.NoSuchProcess:
+        print("Proxy process no longer exists")
 
 
 def test_proxy_log_config_error(start_stop_proxy):
