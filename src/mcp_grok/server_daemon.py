@@ -19,7 +19,6 @@ except ImportError:
 from http.server import HTTPServer
 import threading
 import os
-import sys
 import datetime
 import argparse
 import subprocess
@@ -75,8 +74,7 @@ class ServerDaemon:
         audit_logfile = self._audit_log_path_for(port, timestamp_str)
         logf = open(logfile, "a+")
         cmd = [
-            sys.executable, "-m", "mcp_grok.mcp_grok_server",
-            "--port", str(port), "--projects-dir", projects_dir,
+            "mcp-grok-server", "--port", str(port), "--projects-dir", projects_dir,
             "--audit-log", audit_logfile,
         ]
         proc = subprocess.Popen(cmd, stdout=logf, stderr=logf, start_new_session=True)
