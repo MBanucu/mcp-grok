@@ -58,7 +58,27 @@ def pytest_runtest_teardown(item, nextitem):
 import threading
 import time
 
-_initial_daemons = set()
+class DaemonManager:
+    def __init__(self):
+        self.initial_daemons = set()
+
+    def set_initial(self):
+        from mcp_grok.server_daemon import _gather_leftover_daemons
+        self.initial_daemons = {pid for pid, _, _, _ in _gather_leftover_daemons() if pid is not None}
+
+    def cleanup(self):
+        from mcp_grok.server_daemon import _gather_leftover_daemons, cleanup_leftover_daemons
+        final_daemons = {pid for pid, _, _, _ in _gather_leftover_daemons() if pid is not None}
+        extra_daemons = final_daemons - self.initial_daemons
+        if extra_daemons:
+            cleanup_leftover_daemons()
+            # Check again after cleanup
+            final_daemons_after = {pid for pid, _, _, _ in _gather_leftover_daemons() if pid is not None}
+            extra_daemons_after = final_daemons_after - self.initial_daemons
+            if extra_daemons_after:
+                raise RuntimeError(f"Daemons left running after cleanup: {extra_daemons_after}")
+
+_daemon_manager = DaemonManager()
 
 class ProcessMonitor:
     def __init__(self):
@@ -192,9 +212,8 @@ _monitor = ProcessMonitor()
 
 def pytest_sessionstart(session):
     print("pytest_sessionstart called", flush=True)
-    from mcp_grok.server_daemon import _gather_leftover_daemons
-    global _initial_daemons, _monitor
-    _initial_daemons = {pid for pid, _, _, _ in _gather_leftover_daemons() if pid is not None}
+    global _daemon_manager, _monitor
+    _daemon_manager.set_initial()
     # Start process monitoring
     _monitor.start()
 
@@ -208,16 +227,8 @@ def pytest_sessionfinish(session, exitstatus):
     _monitor.print_history()
 
     # Check daemon cleanup
-    from mcp_grok.server_daemon import _gather_leftover_daemons, cleanup_leftover_daemons
-    final_daemons = {pid for pid, _, _, _ in _gather_leftover_daemons() if pid is not None}
-    extra_daemons = final_daemons - _initial_daemons
-    if extra_daemons:
-        cleanup_leftover_daemons()
-        # Check again after cleanup
-        final_daemons_after = {pid for pid, _, _, _ in _gather_leftover_daemons() if pid is not None}
-        extra_daemons_after = final_daemons_after - _initial_daemons
-        if extra_daemons_after:
-            raise RuntimeError(f"Daemons left running after cleanup: {extra_daemons_after}")
+    global _daemon_manager
+    _daemon_manager.cleanup()
     if _test_leaks:
         lines = [
             "Detected tests that started mcp-grok-server processes and did not stop them:"]
