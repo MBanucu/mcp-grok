@@ -29,6 +29,8 @@ from typing import (
     Dict, Any, Optional, TypedDict, Callable, Tuple, List, Set, cast
 )
 
+from .server_daemon_handler import ServerDaemonHandler, make_handler
+
 from .server_client import DEFAULT_DAEMON_PORT
 from .config import config
 
@@ -90,8 +92,6 @@ def do_start_server(
     except Exception as e:
         return handler._send_json(500, {"error": str(e)})
 
-
-class ServerDaemonHandler(BaseHTTPRequestHandler):
 
     def __init__(self, daemon: 'ServerDaemon', *args, **kwargs) -> None:
         self.daemon = daemon
