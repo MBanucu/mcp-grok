@@ -55,7 +55,8 @@ def pytest_runtest_teardown(item, nextitem):
             _test_leaks.append((item.nodeid, details))
 
 
-from .process_monitor import ProcessMonitor, DaemonManager
+from .process_monitor import ProcessMonitor
+from .daemon_manager import DaemonManager
 
 _monitor = ProcessMonitor()
 _daemon_manager = DaemonManager()
