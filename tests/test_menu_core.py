@@ -52,7 +52,7 @@ def start_stop_proxy(mcp_server):
     except Exception as e:
         raise RuntimeError(f"Failed to start superassistant-proxy: {e}")
     yield manager.proc
-    menu_core.stop_proxy(manager)
+    manager.stop_proxy()
     # Clean up temp file
     os.unlink(config_path)
 

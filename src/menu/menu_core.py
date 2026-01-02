@@ -52,10 +52,6 @@ def start_proxy(config_path=None, port=3006):
     return manager
 
 
-def stop_proxy(manager):
-    manager.stop_proxy()
-
-
 def clear_log(log_path):
     if os.path.exists(log_path):
         with open(log_path, "w"):
