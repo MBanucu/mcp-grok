@@ -19,35 +19,22 @@ except ImportError:
 from http.server import HTTPServer
 import threading
 import os
+import sys
+import datetime
+import argparse
 import subprocess
 import signal
 import time
-import datetime
-import argparse
 from typing import (
-    Dict, Optional, Tuple, List, Set, cast
+    Dict, Optional, Tuple, List, Set
 )
 
 from .server_info import ServerInfo, ServerInfoDict
 
-from .server_daemon_handler import ServerDaemonHandler, make_handler
+from .server_daemon_handler import make_handler
 
 from .server_client import DEFAULT_DAEMON_PORT
 from .config import config
-
-
-def parse_start_params(
-    payload: dict
-) -> Tuple[Optional[int], Optional[str], Optional[str]]:
-    port_raw = payload.get("port")
-    port = int(port_raw) if port_raw is not None else None
-    projects_dir_raw = payload.get("projects_dir")
-    if projects_dir_raw is not None and not isinstance(projects_dir_raw, str):
-        raise TypeError("projects_dir must be str or None")
-    projects_dir: Optional[str] = projects_dir_raw
-    if port is None or port == 0:
-        return None, projects_dir, "port required"
-    return port, projects_dir, None
 
 
 class ServerDaemonHTTPServer(HTTPServer):
@@ -88,7 +75,8 @@ class ServerDaemon:
         audit_logfile = self._audit_log_path_for(port, timestamp_str)
         logf = open(logfile, "a+")
         cmd = [
-            "mcp-grok-server", "--port", str(port), "--projects-dir", projects_dir,
+            sys.executable, "-m", "mcp_grok.mcp_grok_server",
+            "--port", str(port), "--projects-dir", projects_dir,
             "--audit-log", audit_logfile,
         ]
         proc = subprocess.Popen(cmd, stdout=logf, stderr=logf, start_new_session=True)
