@@ -254,7 +254,6 @@ def test_server_exits_on_bad_config(server_daemon_proc):
         assert False, f"Expected 'permission denied' in logs within {timeout}s, got: {log_content}"
 
     # Check that the server does not bind to the privileged port
-    import socket
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         s.connect(('127.0.0.1', bad_port))
