@@ -138,3 +138,5 @@ class ProcessMonitor:
             else:
                 print("\nAll created processes were properly terminated.")
             print()
+
+_monitor = ProcessMonitor()
