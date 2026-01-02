@@ -55,9 +55,7 @@ def pytest_runtest_teardown(item, nextitem):
             _test_leaks.append((item.nodeid, details))
 
 
-from .daemon_manager import DaemonManager
-
-_daemon_manager = DaemonManager()
+from .daemon_manager import _daemon_manager
 
 def pytest_sessionstart(session):
     global _daemon_manager

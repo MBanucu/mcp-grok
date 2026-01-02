@@ -17,3 +17,5 @@ class DaemonManager:
             extra_daemons_after = final_daemons_after - self.initial_daemons
             if extra_daemons_after:
                 raise RuntimeError(f"Daemons left running after cleanup: {extra_daemons_after}")
+
+_daemon_manager = DaemonManager()
