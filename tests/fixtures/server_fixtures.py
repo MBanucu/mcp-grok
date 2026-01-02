@@ -1,7 +1,7 @@
 import tempfile
 import subprocess
 import pytest
-from mcp_grok import server_daemon, server_client
+from mcp_grok import server_client
 
 
 def pick_free_port():
