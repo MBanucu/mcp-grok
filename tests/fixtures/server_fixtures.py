@@ -55,7 +55,7 @@ def mcp_server(server_daemon_proc):
     import socket as _s
     addr = ("127.0.0.1", server_port)
     ready = False
-    for _ in range(60):
+    for _ in range(100):
         try:
             with _s.create_connection(addr, timeout=0.2):
                 ready = True
@@ -63,7 +63,7 @@ def mcp_server(server_daemon_proc):
         except Exception:
             _t.sleep(0.1)
     if not ready:
-        raise RuntimeError(f"Managed server on port {server_port} not ready after 6 sec")
+        raise RuntimeError(f"Managed server on port {server_port} not ready after 10 sec")
     yield {
         "url": f"http://localhost:{server_port}/mcp",
         "projects_dir": projects_dir
