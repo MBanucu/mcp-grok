@@ -60,7 +60,6 @@ from .daemon_manager import DaemonManager
 _daemon_manager = DaemonManager()
 
 def pytest_sessionstart(session):
-    print("pytest_sessionstart called", flush=True)
     global _daemon_manager
     _daemon_manager.set_initial()
 
