@@ -22,13 +22,15 @@ def _writable_logfile(preferred):
 
 
 class ProxyManager:
-    @staticmethod
-    def start_proxy(config_path=None, port=3006):
+    def __init__(self):
+        self.proc = None
+
+    def start_proxy(self, config_path=None, port=3006):
         log = open(_writable_logfile(config.proxy_log), "a")
         cmd = ['superassistant-proxy', '--port', str(port)]
         if config_path:
             cmd.extend(['--config', config_path])
-        proc = subprocess.Popen(
+        self.proc = subprocess.Popen(
             cmd,
             stdin=subprocess.DEVNULL,
             stdout=log,
@@ -36,21 +38,23 @@ class ProxyManager:
             close_fds=True,
             env={**os.environ, 'NO_COLOR': '1'},
         )
-        return proc
+        return self.proc
 
-    @staticmethod
-    def stop_proxy(proc):
-        if proc and proc.poll() is None:
-            proc.terminate()
-            proc.wait(timeout=5)
+    def stop_proxy(self):
+        if self.proc and self.proc.poll() is None:
+            self.proc.terminate()
+            self.proc.wait(timeout=5)
+
+
+_proxy_manager = ProxyManager()
 
 
 def start_proxy(config_path=None, port=3006):
-    return ProxyManager.start_proxy(config_path, port)
+    return _proxy_manager.start_proxy(config_path, port)
 
 
 def stop_proxy(proc):
-    ProxyManager.stop_proxy(proc)
+    _proxy_manager.stop_proxy()
 
 
 def clear_log(log_path):
