@@ -239,7 +239,6 @@ def test_server_exits_on_bad_config(server_daemon_proc):
     logfile = info["logfile"]
 
     # Poll for the log to contain permission denied
-    import time
     start = time.time()
     timeout = 2.0
     log_content = ""
@@ -253,7 +252,6 @@ def test_server_exits_on_bad_config(server_daemon_proc):
         assert False, f"Expected 'permission denied' in logs within {timeout}s, got: {log_content}"
 
     # Check that the server does not bind to the privileged port
-    import socket
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         s.connect(('127.0.0.1', bad_port))
@@ -288,7 +286,6 @@ def test_server_log(server_daemon_proc):
     assert os.path.isfile(logfile), f"Logfile {logfile} is not a file"
 
     # Poll for log content
-    import time
     start = time.time()
     timeout = 2.0
     log_content = ""
