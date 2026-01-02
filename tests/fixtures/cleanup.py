@@ -3,39 +3,6 @@ import pytest
 from tests.fixtures.process_utils import _gather_leftover_entries, _kill_untracked
 
 
-def _collect_and_print_tracked(sm, tracked_pids, tracked_ports):
-    tracked = getattr(sm, '_servers', [])
-    if not tracked:
-        return
-    print("\nServers tracked by menu_core.server_manager that will be stopped:")
-    for entry in list(tracked):
-        port = entry.get('port')
-        proc = entry.get('proc')
-        pid = getattr(proc, 'pid', None) if proc is not None else None
-        if pid:
-            tracked_pids.add(pid)
-        if port is not None:
-            tracked_ports.add(port)
-        cmd = None
-        try:
-            cmd = ' '.join(proc.args) if proc is not None else None
-        except Exception:
-            cmd = None
-        print(f" - port={port}, pid={pid}, cmd={cmd}")
-
-
-def _stop_tracked_servers(sm, tracked_pids, tracked_ports):
-    try:
-        _collect_and_print_tracked(sm, tracked_pids, tracked_ports)
-        while getattr(sm, '_servers', None):
-            try:
-                sm.stop_server()
-            except Exception:
-                break
-    except Exception:
-        pass
-
-
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_leftover_servers():
     """Session-scoped autouse fixture that ensures no mcp-grok-server processes
