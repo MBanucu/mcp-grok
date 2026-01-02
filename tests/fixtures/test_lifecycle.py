@@ -59,7 +59,6 @@ import threading
 import time
 
 _initial_daemons = set()
-_monitor = None
 
 class ProcessMonitor:
     def __init__(self):
@@ -138,13 +137,14 @@ class ProcessMonitor:
                 self.history.append({"type": "error", "message": f"Error monitoring processes: {e}", "timestamp": timestamp})
             time.sleep(0.05)
 
+_monitor = ProcessMonitor()
+
 def pytest_sessionstart(session):
     print("pytest_sessionstart called", flush=True)
     from mcp_grok.server_daemon import _gather_leftover_daemons
     global _initial_daemons, _monitor
     _initial_daemons = {pid for pid, _, _, _ in _gather_leftover_daemons() if pid is not None}
     # Start process monitoring
-    _monitor = ProcessMonitor()
     _monitor.start()
 
 
