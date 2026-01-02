@@ -417,13 +417,16 @@ def _get_listen_ports(p):
 def _get_process_info(p, errors):
     """Get process info with error handling."""
     pid = getattr(p, 'pid', None)
-    name = getattr(p, '_name', '')
+    name = ''
+    try:
+        name = getattr(p, '_name', '')
+    except Exception:
+        name = '<name unavailable>'
     cmdline = ''
     try:
         cmdline = ' '.join(p.cmdline() or [])
     except Exception as e:
         cmdline = '<cmdline unavailable>'
-        errors.append(f"Could not get cmdline for process {pid} ({name}): {e}")
     return pid, name, cmdline
 
 

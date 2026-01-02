@@ -1,4 +1,4 @@
-class TestLeakTracker:
+class MCPServerProcessLeakTracker:
     def __init__(self):
         self.proc_before = {}
         self.test_leaks = []

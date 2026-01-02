@@ -1,7 +1,7 @@
 from .daemon_manager import _daemon_manager
-from .test_leak_tracker import TestLeakTracker
+from .test_leak_tracker import MCPServerProcessLeakTracker
 
-tracker = TestLeakTracker()
+tracker = MCPServerProcessLeakTracker()
 
 
 def pytest_runtest_setup(item):
