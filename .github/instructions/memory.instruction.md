@@ -29,8 +29,8 @@ These instructions provide onboarding, dev workflow, and code quality standards 
 5. **Linting:**
    - Code must pass strict linter checks:
      - Primary: `flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics`
-     - Full:   `flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics`
-   - _Target line length: 79 characters maximum. Exceptions up to 127 are shown for statistics only._
+     - Full:   `flake8 src tests --count --max-complexity=10 --max-line-length=127 --statistics`
+   - _Target line length: 127 characters maximum._
    - CI will fail if any strict linter or PEP8 error is found.
 6. **Type Checking:**
    - Static typing compliance is checked via Pyright (`pyright .`) in the Nix shell.

@@ -20,4 +20,5 @@ class DaemonManager:
         if extra_daemons:
             raise RuntimeError(f"Daemons left before cleanup: {extra_daemons}")
 
+
 _daemon_manager = DaemonManager()

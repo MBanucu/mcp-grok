@@ -52,10 +52,10 @@ Code must pass strict flake8 checks:
 nix develop .#menuSuppressed --command sh -c 'flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics'
 
 # Full linting with statistics
-nix develop .#menuSuppressed --command sh -c 'flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics'
+nix develop .#menuSuppressed --command sh -c 'flake8 src tests --count --max-complexity=10 --max-line-length=127 --statistics'
 ```
 
-**Line length:** Target 79 characters (strict). The second flake8 run shows statistics for lines up to 127 characters but doesn't enforce them.
+**Line length:** The second flake8 run shows statistics for lines up to 127 characters and enforces them.
 
 ### Type Checking
 Static typing is checked via Pyright:
@@ -69,7 +69,7 @@ All public APIs and method arguments should be fully typed.
 
 1. **PEP 8 Compliance:** Follow Python PEP 8 style guidelines
 2. **Type Annotations:** All public APIs must have complete type annotations
-3. **Line Length:** Target 79 characters (strict limit enforced by CI)
+3. **Line Length:** Target 127 characters (strict limit enforced by CI)
 4. **Complexity:** Keep cyclomatic complexity ≤ 10
 5. **Documentation:** Maintain docstrings for public classes, functions, and modules
 6. **Testing:** All features must have corresponding tests

@@ -1,6 +1,6 @@
 import threading
 import time
-from .daemon_manager import DaemonManager
+
 
 class ProcessMonitor:
     """
@@ -138,5 +138,6 @@ class ProcessMonitor:
             else:
                 print("\nAll created processes were properly terminated.")
             print()
+
 
 _monitor = ProcessMonitor()
