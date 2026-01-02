@@ -59,97 +59,106 @@ import threading
 import time
 
 _initial_daemons = set()
-_process_history = []
-_monitor_thread = None
-_monitor_stop = threading.Event()
-_monitor_started = threading.Event()
+_monitor = None
 
-def _monitor_processes():
-    """Background thread to monitor process changes."""
-    import psutil
-    previous_pids = set()
-    try:
-        initial_pids = {p.pid for p in psutil.process_iter(attrs=['pid'])}
-        previous_pids = initial_pids.copy()
-        _process_history.append({"type": "initial_processes", "count": len(initial_pids)})
-        _monitor_started.set()
-    except Exception as e:
-        _process_history.append({"type": "error", "message": f"Error getting initial processes: {e}"})
-        return
+class ProcessMonitor:
+    def __init__(self):
+        self.history = []
+        self.thread = None
+        self.stop_event = threading.Event()
+        self.started_event = threading.Event()
 
-    process_info = {}  # pid -> (name, cmdline)
-    while not _monitor_stop.is_set():
-        import datetime
-        timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+    def start(self):
+        self.thread = threading.Thread(target=self._monitor_processes, daemon=True)
+        self.thread.start()
+        if self.started_event.wait(timeout=5.0):
+            print("Monitoring confirmed started", flush=True)
+        else:
+            print("Monitoring start timeout", flush=True)
+
+    def stop(self):
+        self.stop_event.set()
+        if self.thread:
+            self.thread.join(timeout=1.0)
+        self.history.append({"type": "monitoring_stopped"})
+
+    def _monitor_processes(self):
+        """Background thread to monitor process changes."""
+        import psutil
+        previous_pids = set()
         try:
-            current_procs = {p.pid: p for p in psutil.process_iter(attrs=['pid', 'name'])}
-            current_pids = set(current_procs.keys())
-            new_pids = current_pids - previous_pids
-            gone_pids = previous_pids - current_pids
-
-            # Update info for new processes
-            for pid in new_pids:
-                p = current_procs.get(pid)
-                if p:
-                    try:
-                        name = p.name() or ''
-                    except Exception:
-                        name = '<unknown>'
-                    try:
-                        cmdline = ' '.join(p.cmdline() or [])
-                    except Exception:
-                        cmdline = '<unknown>'
-                    process_info[pid] = (name, cmdline)
-
-            if new_pids:
-                processes = []
-                for pid in sorted(new_pids):
-                    name, cmdline = process_info.get(pid, ('<unknown>', '<unknown>'))
-                    processes.append({"pid": pid, "name": name, "cmdline": cmdline})
-                _process_history.append({"type": "new_processes", "processes": processes, "timestamp": timestamp})
-
-            if gone_pids:
-                processes = []
-                for pid in sorted(gone_pids):
-                    name, cmdline = process_info.get(pid, ('<unknown>', '<unknown>'))
-                    processes.append({"pid": pid, "name": name, "cmdline": cmdline})
-                _process_history.append({"type": "terminated_processes", "processes": processes, "timestamp": timestamp})
-
-            previous_pids = current_pids
+            initial_pids = {p.pid for p in psutil.process_iter(attrs=['pid'])}
+            previous_pids = initial_pids.copy()
+            self.history.append({"type": "initial_processes", "count": len(initial_pids)})
+            self.started_event.set()
         except Exception as e:
-            _process_history.append({"type": "error", "message": f"Error monitoring processes: {e}", "timestamp": timestamp})
-        time.sleep(0.05)
+            self.history.append({"type": "error", "message": f"Error getting initial processes: {e}"})
+            return
+
+        process_info = {}  # pid -> (name, cmdline)
+        while not self.stop_event.is_set():
+            import datetime
+            timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+            try:
+                current_procs = {p.pid: p for p in psutil.process_iter(attrs=['pid', 'name'])}
+                current_pids = set(current_procs.keys())
+                new_pids = current_pids - previous_pids
+                gone_pids = previous_pids - current_pids
+
+                # Update info for new processes
+                for pid in new_pids:
+                    p = current_procs.get(pid)
+                    if p:
+                        try:
+                            name = p.name() or ''
+                        except Exception:
+                            name = '<unknown>'
+                        try:
+                            cmdline = ' '.join(p.cmdline() or [])
+                        except Exception:
+                            cmdline = '<unknown>'
+                        process_info[pid] = (name, cmdline)
+
+                if new_pids:
+                    processes = []
+                    for pid in sorted(new_pids):
+                        name, cmdline = process_info.get(pid, ('<unknown>', '<unknown>'))
+                        processes.append({"pid": pid, "name": name, "cmdline": cmdline})
+                    self.history.append({"type": "new_processes", "processes": processes, "timestamp": timestamp})
+
+                if gone_pids:
+                    processes = []
+                    for pid in sorted(gone_pids):
+                        name, cmdline = process_info.get(pid, ('<unknown>', '<unknown>'))
+                        processes.append({"pid": pid, "name": name, "cmdline": cmdline})
+                    self.history.append({"type": "terminated_processes", "processes": processes, "timestamp": timestamp})
+
+                previous_pids = current_pids
+            except Exception as e:
+                self.history.append({"type": "error", "message": f"Error monitoring processes: {e}", "timestamp": timestamp})
+            time.sleep(0.05)
 
 def pytest_sessionstart(session):
     print("pytest_sessionstart called", flush=True)
     from mcp_grok.server_daemon import _gather_leftover_daemons
-    global _initial_daemons, _monitor_thread
+    global _initial_daemons, _monitor
     _initial_daemons = {pid for pid, _, _, _ in _gather_leftover_daemons() if pid is not None}
     # Start process monitoring
-    _monitor_thread = threading.Thread(target=_monitor_processes, daemon=True)
-    _monitor_thread.start()
-    print("Thread started", flush=True)
-    # Wait for monitoring to start
-    if _monitor_started.wait(timeout=5.0):
-        print("Monitoring confirmed started", flush=True)
-    else:
-        print("Monitoring start timeout", flush=True)
+    _monitor = ProcessMonitor()
+    _monitor.start()
 
 
 def pytest_sessionfinish(session, exitstatus):
     # Stop process monitoring
-    global _monitor_stop
-    _monitor_stop.set()
-    if _monitor_thread:
-        _monitor_thread.join(timeout=1.0)
-    _process_history.append({"type": "monitoring_stopped"})
+    global _monitor
+    _monitor.stop()
 
     # Print process history
-    if _process_history:
+    if _monitor.history:
         # First pass: collect created and terminated PIDs
         created_pids = set()
         terminated_pids = set()
-        for entry in _process_history:
+        for entry in _monitor.history:
             if isinstance(entry, dict):
                 if entry["type"] == "new_processes":
                     for proc in entry["processes"]:
@@ -162,7 +171,7 @@ def pytest_sessionfinish(session, exitstatus):
 
         # Second pass: print with highlighting
         print("\nProcess lifecycle history:")
-        for entry in _process_history:
+        for entry in _monitor.history:
             if isinstance(entry, dict):
                 if entry["type"] == "initial_processes":
                     print(f"  Initial processes: {entry['count']}")
